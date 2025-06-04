@@ -24,6 +24,10 @@ export default function ProfilePage() {
   const [video, setVideo] = useState(null);
   const [userAnnonces, setUserAnnonces] = useState([]);
   const [loadingAnnonces, setLoadingAnnonces] = useState(false);
+
+  // États pour le modal des médias
+  const [showMediaModal, setShowMediaModal] = useState(false);
+  const [currentMedia, setCurrentMedia] = useState({ type: null, src: null });
   
   // Données du profil utilisateur - utilise les vraies données de l'utilisateur connecté
   const [userProfile, setUserProfile] = useState({
@@ -84,6 +88,19 @@ export default function ProfilePage() {
   const filteredFollowing = userProfile.following.filter(
     person => person.name.toLowerCase().includes(searchFollowing.toLowerCase())
   );
+
+  // Fonctions pour gérer le modal des médias
+  const openMediaModal = (type, src) => {
+    console.log('Opening media modal:', { type, src });
+    setCurrentMedia({ type, src });
+    setShowMediaModal(true);
+  };
+
+  const closeMediaModal = () => {
+    console.log('Closing media modal');
+    setShowMediaModal(false);
+    setCurrentMedia({ type: null, src: null });
+  };
 
   // Charger les annonces de l'utilisateur
   const loadUserAnnonces = async () => {
@@ -1010,88 +1027,151 @@ export default function ProfilePage() {
                   </div>
                 ) : (
                   userAnnonces.map(annonce => (
-                    <div key={annonce.ID_ANNONCE} className="bg-white rounded-lg shadow p-4">
-                      <div className="flex items-center space-x-3 mb-3">
-                        <div className="w-10 h-10 rounded-full overflow-hidden">
-                          <img src={userProfile.avatar} alt="Profile" className="w-full h-full object-cover" />
-                        </div>
-                        <div>
-                          <div className="font-medium">{userProfile.name}</div>
-                          <div className="text-xs text-gray-500">{annonce.TIME_AGO}</div>
-                        </div>
-                      </div>
-
-                      {/* Titre et description */}
-                      <h3 className="font-semibold text-lg mb-2">{annonce.TITRE}</h3>
-                      {annonce.DESCRIPTION && (
-                        <p className="mb-3 text-gray-700">{annonce.DESCRIPTION}</p>
-                      )}
-
-                      {/* Détails de l'annonce */}
-                      <div className="bg-blue-50 p-3 rounded-lg mb-3">
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <div><span className="font-medium">Type:</span> {annonce.TYPE_TEXT}</div>
-                          <div><span className="font-medium">Prix:</span> {annonce.PRIX_FORMATTED}</div>
-                          <div><span className="font-medium">Localisation:</span> {annonce.LOCALISATION}</div>
-                          {annonce.SUPERFICIE && (
-                            <div><span className="font-medium">Surface:</span> {annonce.SUPERFICIE}m²</div>
-                          )}
-                          {annonce.NB_PIECES && (
-                            <div><span className="font-medium">Pièces:</span> {annonce.NB_PIECES}</div>
-                          )}
-                          <div><span className="font-medium">État:</span> {annonce.MEUBLE_TEXT}</div>
-                        </div>
-                      </div>
-
-                      {/* Images */}
-                      {annonce.IMAGES && annonce.IMAGES.length > 0 && (
-                        <div className="mb-3">
-                          <img
-                            src={AnnonceService.getImageUrl(annonce.IMAGES[0])}
-                            alt="Annonce"
-                            className="w-full h-48 object-cover rounded-lg"
-                          />
-                          {annonce.IMAGES.length > 1 && (
-                            <p className="text-xs text-gray-500 mt-1">+{annonce.IMAGES.length - 1} autres photos</p>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Vidéo */}
-                      {annonce.VIDEO && (
-                        <div className="mb-3">
-                          <video
-                            src={AnnonceService.getVideoUrl(annonce.VIDEO)}
-                            controls
-                            className="w-full h-48 object-cover rounded-lg"
-                          />
-                        </div>
-                      )}
-
-                      {/* Actions */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex space-x-4">
-                          <button className="flex items-center space-x-1 text-gray-600 hover:text-blue-600">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-                            </svg>
-                            <span>{annonce.LIKES_COUNT || 0}</span>
-                          </button>
-                          <button className="flex items-center space-x-1 text-gray-600 hover:text-blue-600">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.003 8.003 0 01-7.93-6.66c-.013-.239-.013-.464 0-.704A8.003 8.003 0 0113 4c4.418 0 8 3.582 8 8z"></path>
-                            </svg>
-                            <span>{annonce.COMMENTS_COUNT || 0}</span>
-                          </button>
-                          <div className="text-xs text-gray-500">
-                            {annonce.VUES || 0} vues
+                    <div key={annonce.ID_ANNONCE} className="bg-white rounded-lg shadow overflow-hidden relative">
+                      <div className="p-4">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 rounded-full bg-gray-300 overflow-hidden">
+                            <img src={userProfile.avatar} alt="Profile" className="w-full h-full object-cover" />
+                          </div>
+                          <div>
+                            <div className="font-medium">{userProfile.name}</div>
+                            <div className="text-xs text-gray-500">{annonce.TIME_AGO}</div>
                           </div>
                         </div>
-                        <button className="text-gray-600 hover:text-blue-600">
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"></path>
-                          </svg>
-                        </button>
+
+                        {/* Tags colorés comme dans le Feed */}
+                        <div className="mt-3 mb-3 py-2 border-y border-gray-100">
+                          <div className="flex flex-wrap gap-2">
+                            {annonce.TYPE_TEXT && (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                {annonce.TYPE_TEXT}
+                              </span>
+                            )}
+                            {annonce.LOCALISATION && (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                {annonce.LOCALISATION}
+                              </span>
+                            )}
+                            {annonce.QUARTIER && (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                {annonce.QUARTIER}
+                              </span>
+                            )}
+                            {annonce.TYPE_DUREE && (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                {annonce.TYPE_DUREE}
+                              </span>
+                            )}
+                            {annonce.PRIX_FORMATTED && (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                {annonce.PRIX_FORMATTED}
+                              </span>
+                            )}
+                            {annonce.SUPERFICIE && (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                {annonce.SUPERFICIE}m²
+                              </span>
+                            )}
+                            {annonce.NB_PIECES && (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                {annonce.NB_PIECES} pièces
+                              </span>
+                            )}
+                            {annonce.MEUBLE_TEXT && (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-pink-100 text-pink-800">
+                                {annonce.MEUBLE_TEXT}
+                              </span>
+                            )}
+                            {annonce.EQUIPEMENTS && annonce.EQUIPEMENTS.length > 0 && annonce.EQUIPEMENTS.map((amenity, index) => (
+                              amenity && amenity.trim() && (
+                                <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
+                                  {amenity.trim()}
+                                </span>
+                              )
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Images et vidéos en miniature comme dans le Feed */}
+                      <div className="mt-3">
+                        {((annonce.IMAGES && annonce.IMAGES.length > 0) || annonce.VIDEO) && (
+                          <div className="flex gap-2 flex-wrap px-4">
+                            {/* Affichage des images multiples */}
+                            {annonce.IMAGES && annonce.IMAGES.length > 0 && annonce.IMAGES.map((image, index) => (
+                              <div
+                                key={index}
+                                className="relative w-20 h-20 rounded-lg overflow-hidden bg-gray-100 cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={() => openMediaModal('image', AnnonceService.getImageUrl(image))}
+                              >
+                                <img
+                                  src={AnnonceService.getImageUrl(image)}
+                                  alt={`Annonce image ${index + 1}`}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    e.target.style.display = 'none';
+                                  }}
+                                />
+                                <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 transition-all flex items-center justify-center">
+                                  <svg className="w-6 h-6 text-white opacity-0 hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                  </svg>
+                                </div>
+                                {/* Indicateur du nombre d'images */}
+                                {index === 0 && annonce.IMAGES.length > 1 && (
+                                  <div className="absolute top-1 left-1 bg-black bg-opacity-70 text-white text-xs px-1 rounded">
+                                    +{annonce.IMAGES.length - 1}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+
+                            {/* Affichage de la vidéo */}
+                            {annonce.VIDEO && (
+                              <div
+                                className="relative w-20 h-20 rounded-lg overflow-hidden bg-gray-100 cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={() => openMediaModal('video', AnnonceService.getVideoUrl(annonce.VIDEO))}
+                              >
+                                <video
+                                  src={AnnonceService.getVideoUrl(annonce.VIDEO)}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    e.target.style.display = 'none';
+                                  }}
+                                />
+                                <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center">
+                                  <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd"></path>
+                                  </svg>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="px-4 py-2 border-t border-gray-100">
+                        <div className="flex justify-between">
+                          <div className="flex space-x-4">
+                            <button className="flex items-center space-x-1 text-gray-500 hover:text-red-600">
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                              </svg>
+                              <span>{annonce.LIKES_COUNT || 0}</span>
+                            </button>
+                            <button className="flex items-center space-x-1 text-gray-500 hover:text-blue-600">
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                              </svg>
+                              <span>{annonce.COMMENTS_COUNT || 0}</span>
+                            </button>
+                          </div>
+                          <button className="text-gray-500 hover:text-blue-600">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"></path>
+                            </svg>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))
@@ -1198,6 +1278,49 @@ export default function ProfilePage() {
           
         </div>
       </div>
+
+      {/* Modal pour afficher les médias en grand */}
+      {showMediaModal && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4"
+          onClick={closeMediaModal}
+        >
+          <div className="relative max-w-4xl max-h-full w-full h-full flex items-center justify-center">
+            {/* Bouton fermer */}
+            <button
+              onClick={closeMediaModal}
+              className="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
+            >
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Contenu du modal */}
+            <div
+              className="w-full h-full flex items-center justify-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {currentMedia.type === 'image' ? (
+                <img
+                  src={currentMedia.src}
+                  alt="Image agrandie"
+                  className="max-w-full max-h-full object-contain cursor-pointer"
+                  onClick={closeMediaModal}
+                />
+              ) : currentMedia.type === 'video' ? (
+                <video
+                  src={currentMedia.src}
+                  controls
+                  autoPlay
+                  className="max-w-full max-h-full object-contain"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ) : null}
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

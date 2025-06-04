@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import AnnonceService from '../services/AnnonceService';
+import LikeService from '../services/LikeService';
 import StoryViewer from './StoryViewer';
 
 export default function Feed() {
@@ -49,8 +50,13 @@ export default function Feed() {
           avatar: annonce.AUTEUR_AVATAR || "https://via.placeholder.com/40",
           time: annonce.TIME_AGO,
           content: annonce.DESCRIPTION || annonce.CONTENT_SUMMARY,
+          // Support des images multiples
+          images: annonce.IMAGES && annonce.IMAGES.length > 0
+            ? annonce.IMAGES.map(img => AnnonceService.getImageUrl(img))
+            : (annonce.POST_IMG ? [AnnonceService.getImageUrl(annonce.POST_IMG)] : []),
+          // Garde l'image unique pour compatibilité
           image: annonce.POST_IMG ? AnnonceService.getImageUrl(annonce.POST_IMG) :
-                 (annonce.IMAGES && annonce.IMAGES.length > 0 ? AnnonceService.getImageUrl(annonce.IMAGES[0]) : null),
+                 (annonce.IMAGES && annonce.IMAGES.length > 0 ? AnnonceService.getImageUrl(annonce.images.map()) : null),
           video: annonce.POST_VID ? AnnonceService.getVideoUrl(annonce.POST_VID) :
                  (annonce.VIDEO ? AnnonceService.getVideoUrl(annonce.VIDEO) : null),
           likes: annonce.LIKES_COUNT || 0,
@@ -273,26 +279,42 @@ export default function Feed() {
     }
   };
 
-  const handleLikePost = (postId) => {
-    setLikedPosts(prev => {
-      const isLiked = prev[postId];
+  const handleLikePost = async (postId) => {
+    if (!user) {
+      alert('Vous devez être connecté pour liker un post');
+      return;
+    }
 
-      // Mettre à jour le nombre de likes dans les posts
-      setPosts(posts.map(post => {
-        if (post.id === postId) {
-          return {
-            ...post,
-            likes: isLiked ? post.likes - 1 : post.likes + 1
-          };
-        }
-        return post;
-      }));
+    try {
+      const result = await LikeService.toggleLike(user.ID_USER, postId);
 
-      return {
-        ...prev,
-        [postId]: !isLiked
-      };
-    });
+      if (result.success) {
+        // Mettre à jour l'état local des likes
+        setLikedPosts(prev => ({
+          ...prev,
+          [postId]: result.isLiked
+        }));
+
+        // Mettre à jour le nombre de likes dans les posts
+        setPosts(prevPosts => prevPosts.map(post => {
+          if (post.id === postId) {
+            return {
+              ...post,
+              likes: result.totalLikes
+            };
+          }
+          return post;
+        }));
+
+        console.log(result.message);
+      } else {
+        console.error('Erreur lors du like:', result.error);
+        alert('Erreur lors du like: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Erreur lors du like:', error);
+      alert('Erreur lors du like');
+    }
   };
 
   // Fonction pour ouvrir le modal des médias
