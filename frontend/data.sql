@@ -1,6 +1,6 @@
 /*==============================================================*/
 /* Nom de SGBD :  MySQL 5.0                                     */
-/* Date de création :  28/05/2025 12:07:55                      */
+/* Date de crÃ©ation :  28/05/2025 12:07:55                      */
 /*==============================================================*/
 
 SET FOREIGN_KEY_CHECKS=0;
@@ -258,3 +258,37 @@ alter table STORY add constraint FK_SUPP_STORY foreign key (ID_ADMIN)
 
 alter table USER add constraint FK_BLOQUER foreign key (ID_ADMIN)
       references ADMIN (ID_ADMIN) on delete restrict on update restrict;
+
+/*==============================================================*/
+/* Table : ENREGISTRER                                          */
+/*==============================================================*/
+create table ENREGISTRER
+(
+   ID_USER              int                            not null,
+   ID_POST              int                            not null,
+   DATE_SAVE            timestamp DEFAULT CURRENT_TIMESTAMP,
+   primary key (ID_USER, ID_POST)
+)
+ENGINE = InnoDB;
+
+/*==============================================================*/
+/* Index : ENREGISTRER_USER_FK                                  */
+/*==============================================================*/
+create index ENREGISTRER_USER_FK on ENREGISTRER
+(
+   ID_USER
+);
+
+/*==============================================================*/
+/* Index : ENREGISTRER_POST_FK                                  */
+/*==============================================================*/
+create index ENREGISTRER_POST_FK on ENREGISTRER
+(
+   ID_POST
+);
+
+alter table ENREGISTRER add constraint FK_ENREGISTRER_USER foreign key (ID_USER)
+      references USER (ID_USER) on delete restrict on update restrict;
+
+alter table ENREGISTRER add constraint FK_ENREGISTRER_POST foreign key (ID_POST)
+      references POSTE (ID_POST) on delete restrict on update restrict;

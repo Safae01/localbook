@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import AnnonceService from '../services/AnnonceService';
 import CommentService from '../services/CommentService';
 import LikeService from '../services/LikeService';
+import EditProfileService from '../services/EditProfileService';
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -16,6 +17,7 @@ export default function ProfilePage() {
   const [likedPosts, setLikedPosts] = useState({});
   const [postType, setPostType] = useState('');
   const [location, setLocation] = useState('');
+  const [quartier, setQuartier] = useState('');
   const [durationType, setDurationType] = useState('');
   const [price, setPrice] = useState('');
   const [area, setArea] = useState('');
@@ -192,25 +194,51 @@ export default function ProfilePage() {
   };
   
   // Gérer la soumission du formulaire de modification du profil
-  const handleProfileSubmit = (e) => {
+  const handleProfileSubmit = async (e) => {
     e.preventDefault();
     
-    // Mettre à jour le profil avec les nouvelles valeurs
-    setUserProfile({
-      ...userProfile,
-      ...editedProfile,
-      avatar: avatarPreview,
-      coverPhoto: coverPhotoPreview
-    });
-    
-    // Fermer le formulaire
-    setShowEditProfileForm(false);
-    
-    // Réinitialiser les fichiers
-    setAvatarFile(null);
-    setCoverPhotoFile(null);
-    
-    console.log("Profil mis à jour:", editedProfile);
+    try {
+      // Appeler le service de mise à jour
+      const result = await EditProfileService.updateProfile(
+        user.ID_USER,
+        {
+          name: editedProfile.name,
+          username: editedProfile.username,
+          bio: editedProfile.bio,
+          location: editedProfile.location,
+          status: editedProfile.status,
+          city: editedProfile.city,
+          age: editedProfile.age,
+          birthday: editedProfile.birthday,
+          email: editedProfile.email,
+          phone: editedProfile.phone
+        },
+        avatarFile,
+        coverPhotoFile
+      );
+
+      if (result.success) {
+        // Mettre à jour le profil avec les nouvelles valeurs
+        setUserProfile({
+          ...userProfile,
+          ...editedProfile,
+          avatar: avatarPreview,
+          coverPhoto: coverPhotoPreview
+        });
+        
+        // Fermer le formulaire
+        setShowEditProfileForm(false);
+        
+        // Réinitialiser les fichiers
+        setAvatarFile(null);
+        setCoverPhotoFile(null);
+      } else {
+        alert('Erreur lors de la mise à jour du profil : ' + result.error);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du profil:', error);
+      alert('Une erreur est survenue lors de la mise à jour du profil');
+    }
   };
   
   // Annuler les modifications et fermer le formulaire
@@ -279,6 +307,7 @@ export default function ProfilePage() {
     setShowPostForm(false);
     setPostType('');
     setLocation('');
+    setQuartier('');
     setDurationType('');
     setPrice('');
     setArea('');
@@ -638,16 +667,6 @@ export default function ProfilePage() {
                     />
                   </div>
                   
-                  <div className="sm:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Site web</label>
-                    <input 
-                      type="url" 
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      value={editedProfile.website}
-                      onChange={(e) => setEditedProfile({...editedProfile, website: e.target.value})}
-                      placeholder="https://www.example.com"
-                    />
-                  </div>
                 </div>
               </div>
               
@@ -733,15 +752,29 @@ export default function ProfilePage() {
                 
                 {/* Localisation */}
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Localisation (ville, quartier)</label>
+                  <label className="block text-sm font-medium text-gray-700">Localisation (ville)</label>
                   <input 
                     type="text" 
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 transition-colors hover:border-blue-300"
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    placeholder="Ex: Paris 11ème, Bastille"
+                    placeholder="Ex: Paris, Tanger"
                     required
                   />
+                </div>
+                
+                {/* Quartier */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">Quartier</label>
+                  <input
+                    type="text"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 transition-colors hover:border-blue-300"
+                    value={quartier}
+                    onChange={(e) => setQuartier(e.target.value)}
+                    placeholder="Ex: Bastille, Birchifa"
+                    required
+                  />
+                
                 </div>
                 
                 {/* Durée */}
@@ -1130,7 +1163,7 @@ export default function ProfilePage() {
                     <svg className="w-5 h-5 mr-1 text-green-500" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd"></path>
                     </svg>
-                    Photo/Vidéo
+                    ajouter une Annonce immobilière
                   </button>
                 </div>
               </div>
@@ -1218,53 +1251,36 @@ export default function ProfilePage() {
                       {/* Images et vidéos en miniature comme dans le Feed */}
                       <div className="px-3"> {/* Padding horizontal uniquement */}
                         {((annonce.IMAGES && annonce.IMAGES.length > 0) || annonce.VIDEO) && (
-                          <div className="space-y-2">
-                            {/* Vidéo en haut si présente */}
-                            {annonce.VIDEO && (
-                              <div className="rounded-xl overflow-hidden shadow-lg mb-2 w-full">
-                                <video
-                                  src={AnnonceService.getVideoUrl(annonce.VIDEO)}
-                                  controls
-                                  className="w-full h-72 object-cover bg-black"
+                          <div className="flex w-full gap-0"> {/* flex-row, médias côte à côte, prennent toute la largeur */}
+                            {/* Images */}
+                            {annonce.IMAGES && annonce.IMAGES.map((image, index) => (
+                              <div
+                                key={"img-" + index}
+                                className="overflow-hidden shadow-lg hover:scale-105 transition-transform cursor-pointer w-72 h-60"
+                                onClick={() => openMediaModal('image', AnnonceService.getImageUrl(image))}
+                              >
+                                <img
+                                  src={AnnonceService.getImageUrl(image)}
+                                  alt={`Annonce image ${index + 1}`}
+                                  className="w-full h-full object-cover bg-gray-100"
+                                  onError={(e) => {
+                                    e.target.style.display = 'none';
+                                  }}
                                 />
                               </div>
-                            )}
-                            {/* Grille d'images */}
-                            {annonce.IMAGES && annonce.IMAGES.length > 0 && (
-                              annonce.IMAGES.length === 1 ? (
-                                <div
-                                  className="rounded-xl overflow-hidden shadow-lg hover:scale-105 transition-transform cursor-pointer"
-                                  onClick={() => openMediaModal('image', AnnonceService.getImageUrl(annonce.IMAGES[0]))}
-                                >
-                                  <img
-                                    src={AnnonceService.getImageUrl(annonce.IMAGES[0])}
-                                    alt="Annonce image 1"
-                                    className="w-full h-64 object-cover bg-gray-100"
-                                    onError={(e) => {
-                                      e.target.style.display = 'none';
-                                    }}
-                                  />
-                                </div>
-                              ) : (
-                                <div className="flex gap-2">
-                                  {annonce.IMAGES.map((image, index) => (
-                                    <div
-                                      key={index}
-                                      className="rounded-xl overflow-hidden shadow-lg hover:scale-105 transition-transform cursor-pointer w-32 h-32"
-                                      onClick={() => openMediaModal('image', AnnonceService.getImageUrl(image))}
-                                    >
-                                      <img
-                                        src={AnnonceService.getImageUrl(image)}
-                                        alt={`Annonce image ${index + 1}`}
-                                        className="w-full h-full object-cover bg-gray-100"
-                                        onError={(e) => {
-                                          e.target.style.display = 'none';
-                                        }}
-                                      />
-                                    </div>
-                                  ))}
-                                </div>
-                              )
+                            ))}
+                            {/* Vidéo */}
+                            {annonce.VIDEO && (
+                              <div
+                                className="overflow-hidden shadow-lg hover:scale-105 transition-transform cursor-pointer w-72 h-60"
+                                onClick={() => openMediaModal('video', AnnonceService.getVideoUrl(annonce.VIDEO))}
+                              >
+                                <video
+                                  src={AnnonceService.getVideoUrl(annonce.VIDEO)}
+                                  className="w-full h-full object-cover bg-black"
+                                  controls
+                                />
+                              </div>
                             )}
                           </div>
                         )}
