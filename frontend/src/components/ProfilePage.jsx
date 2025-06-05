@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import AnnonceService from '../services/AnnonceService';
+import CommentService from '../services/CommentService';
+import LikeService from '../services/LikeService';
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -287,26 +289,135 @@ export default function ProfilePage() {
     setVideo(null);
   };
 
-  // Fonction pour afficher/masquer les commentaires
-  const toggleComments = (postId) => {
-    setShowComments(prev => ({
+  // Ajouter les mêmes états et fonctions que dans Feed.jsx
+  const [comments, setComments] = useState({});
+  const [commentText, setCommentText] = useState({});
+
+  // Fonction pour charger les commentaires d'un post
+  const loadComments = async (postId) => {
+    try {
+      const result = await CommentService.getComments(postId);
+      if (result.success) {
+        setComments(prev => ({
+          ...prev,
+          [postId]: result.comments
+        }));
+      } else {
+        console.error('Erreur lors du chargement des commentaires:', result.error);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des commentaires:', error);
+    }
+  };
+
+  // Fonction pour gérer la saisie du commentaire
+  const handleCommentChange = (postId, text) => {
+    setCommentText(prev => ({
       ...prev,
-      [postId]: !prev[postId]
+      [postId]: text
     }));
   };
 
-  const handleLikePost = (postId) => {
-    setLikedPosts(prev => {
-      const isLiked = prev[postId];
+  // Fonction pour envoyer un commentaire
+  const handleSubmitComment = async (postId) => {
+    if (!user) {
+      alert('Vous devez être connecté pour commenter');
+      return;
+    }
+
+    const text = commentText[postId]?.trim();
+    if (!text) return;
+
+    try {
+      // Utiliser l'ID_USER de l'objet user au lieu de userProfile.id
+      const result = await CommentService.addComment(user.ID_USER, postId, text);
       
-      // Si vous avez un état pour les posts, mettez-le à jour ici
-      
-      return {
-        ...prev,
-        [postId]: !isLiked
-      };
-    });
+      if (result.success) {
+        // Ajouter le nouveau commentaire à la liste
+        setComments(prev => ({
+          ...prev,
+          [postId]: [result.comment, ...(prev[postId] || [])]
+        }));
+        
+        // Réinitialiser le champ de texte
+        setCommentText(prev => ({
+          ...prev,
+          [postId]: ''
+        }));
+        
+        // Mettre à jour le nombre de commentaires dans les posts si nécessaire
+      } else {
+        alert('Erreur lors de l\'ajout du commentaire: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout du commentaire:', error);
+      alert('Erreur lors de l\'ajout du commentaire');
+    }
   };
+
+  // Modifier la fonction toggleComments pour charger les commentaires
+  const toggleComments = (postId) => {
+    const willShow = !showComments[postId];
+    
+    setShowComments(prev => ({
+      ...prev,
+      [postId]: willShow
+    }));
+    
+    // Charger les commentaires si on ouvre la section
+    if (willShow && (!comments[postId] || comments[postId].length === 0)) {
+      loadComments(postId);
+    }
+  };
+
+  const handleLikePost = async (postId) => {
+    if (!user) {
+      alert('Vous devez être connecté pour liker un post');
+      return;
+    }
+
+    try {
+      const result = await LikeService.toggleLike(user.ID_USER, postId);
+
+      if (result.success) {
+        // Mettre à jour l'état local des likes
+        setLikedPosts(prev => ({
+          ...prev,
+          [postId]: result.isLiked
+        }));
+
+        // Mettre à jour le nombre de likes dans les annonces si nécessaire
+        setUserAnnonces(prevAnnonces => prevAnnonces.map(annonce => {
+          if (annonce.ID_POST === postId) {
+            return {
+              ...annonce,
+              LIKES_COUNT: result.totalLikes // <-- c'est ce champ qui est affiché
+            };
+          }
+          return annonce;
+        }));
+      } else {
+        console.error('Erreur lors du like:', result.error);
+      }
+    } catch (error) {
+      console.error('Erreur lors du like:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (user && userAnnonces.length > 0) {
+      LikeService.getMultipleLikeStatus(user.ID_USER, userAnnonces.map(a => a.ID_POST))
+        .then(result => {
+          if (result.success) {
+            const newLikedPosts = {};
+            Object.entries(result.likesStatus).forEach(([postId, status]) => {
+              newLikedPosts[postId] = status.isLiked;
+            });
+            setLikedPosts(newLikedPosts);
+          }
+        });
+    }
+  }, [user, userAnnonces]);
 
   return (
     <main className="flex-1 overflow-y-auto bg-gray-100 relative">
@@ -825,25 +936,36 @@ export default function ProfilePage() {
                     </div>
                   </div>
                   
-                  {/* Aperçu des images */}
-                  {images.length > 0 && (
-                    <div className="grid grid-cols-3 gap-2 mt-2">
-                      {images.map((img, index) => (
-                        <div key={index} className="relative rounded-xl overflow-hidden h-24 group">
-                          <img src={img} alt={`Preview ${index}`} className="w-full h-full object-cover" />
-                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
-                            <button 
-                              type="button"
-                              className="opacity-0 group-hover:opacity-100 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 focus:outline-none transition-opacity"
-                              onClick={() => setImages(images.filter((_, i) => i !== index))}
-                            >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                  {/* Aperçu des images et vidéo uploadées */}
+                  {(images.length > 0 || video) && (
+                    <div className="flex w-full gap-0 items-center mt-2">
+                      {(() => {
+                        const medias = [...images, ...(video ? [video] : [])];
+                        return medias.map((media, index) => {
+                          const isVideo = video && media === video;
+                          return (
+                            <div key={index} className="overflow-hidden shadow-lg hover:scale-105 transition-transform cursor-pointer flex-1 h-60 relative">
+                              {isVideo ? (
+                                <video src={media} controls className="w-full h-full object-cover bg-black" />
+                              ) : (
+                                <img src={media} alt={`Preview ${index}`} className="w-full h-full object-cover bg-gray-100" />
+                              )}
+                              <button
+                                type="button"
+                                className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1"
+                                onClick={() => {
+                                  if (isVideo) setVideo(null);
+                                  else setImages(images.filter((_, i) => i !== index));
+                                }}
+                              >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                          );
+                        });
+                      })()}
                     </div>
                   )}
                 </div>
@@ -1027,7 +1149,7 @@ export default function ProfilePage() {
                   </div>
                 ) : (
                   userAnnonces.map(annonce => (
-                    <div key={annonce.ID_ANNONCE} className="bg-white rounded-lg shadow overflow-hidden relative">
+                    <div key={annonce.ID_POST} className="bg-white rounded-lg shadow overflow-hidden relative">
                       <div className="p-4">
                         <div className="flex items-center space-x-3">
                           <div className="w-10 h-10 rounded-full bg-gray-300 overflow-hidden">
@@ -1094,57 +1216,55 @@ export default function ProfilePage() {
                       </div>
 
                       {/* Images et vidéos en miniature comme dans le Feed */}
-                      <div className="mt-3">
+                      <div className="px-3"> {/* Padding horizontal uniquement */}
                         {((annonce.IMAGES && annonce.IMAGES.length > 0) || annonce.VIDEO) && (
-                          <div className="flex gap-2 flex-wrap px-4">
-                            {/* Affichage des images multiples */}
-                            {annonce.IMAGES && annonce.IMAGES.length > 0 && annonce.IMAGES.map((image, index) => (
-                              <div
-                                key={index}
-                                className="relative w-20 h-20 rounded-lg overflow-hidden bg-gray-100 cursor-pointer hover:opacity-80 transition-opacity"
-                                onClick={() => openMediaModal('image', AnnonceService.getImageUrl(image))}
-                              >
-                                <img
-                                  src={AnnonceService.getImageUrl(image)}
-                                  alt={`Annonce image ${index + 1}`}
-                                  className="w-full h-full object-cover"
-                                  onError={(e) => {
-                                    e.target.style.display = 'none';
-                                  }}
-                                />
-                                <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 transition-all flex items-center justify-center">
-                                  <svg className="w-6 h-6 text-white opacity-0 hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                  </svg>
-                                </div>
-                                {/* Indicateur du nombre d'images */}
-                                {index === 0 && annonce.IMAGES.length > 1 && (
-                                  <div className="absolute top-1 left-1 bg-black bg-opacity-70 text-white text-xs px-1 rounded">
-                                    +{annonce.IMAGES.length - 1}
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-
-                            {/* Affichage de la vidéo */}
+                          <div className="space-y-2">
+                            {/* Vidéo en haut si présente */}
                             {annonce.VIDEO && (
-                              <div
-                                className="relative w-20 h-20 rounded-lg overflow-hidden bg-gray-100 cursor-pointer hover:opacity-80 transition-opacity"
-                                onClick={() => openMediaModal('video', AnnonceService.getVideoUrl(annonce.VIDEO))}
-                              >
+                              <div className="rounded-xl overflow-hidden shadow-lg mb-2 w-full">
                                 <video
                                   src={AnnonceService.getVideoUrl(annonce.VIDEO)}
-                                  className="w-full h-full object-cover"
-                                  onError={(e) => {
-                                    e.target.style.display = 'none';
-                                  }}
+                                  controls
+                                  className="w-full h-72 object-cover bg-black"
                                 />
-                                <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center">
-                                  <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd"></path>
-                                  </svg>
-                                </div>
                               </div>
+                            )}
+                            {/* Grille d'images */}
+                            {annonce.IMAGES && annonce.IMAGES.length > 0 && (
+                              annonce.IMAGES.length === 1 ? (
+                                <div
+                                  className="rounded-xl overflow-hidden shadow-lg hover:scale-105 transition-transform cursor-pointer"
+                                  onClick={() => openMediaModal('image', AnnonceService.getImageUrl(annonce.IMAGES[0]))}
+                                >
+                                  <img
+                                    src={AnnonceService.getImageUrl(annonce.IMAGES[0])}
+                                    alt="Annonce image 1"
+                                    className="w-full h-64 object-cover bg-gray-100"
+                                    onError={(e) => {
+                                      e.target.style.display = 'none';
+                                    }}
+                                  />
+                                </div>
+                              ) : (
+                                <div className="flex gap-2">
+                                  {annonce.IMAGES.map((image, index) => (
+                                    <div
+                                      key={index}
+                                      className="rounded-xl overflow-hidden shadow-lg hover:scale-105 transition-transform cursor-pointer w-32 h-32"
+                                      onClick={() => openMediaModal('image', AnnonceService.getImageUrl(image))}
+                                    >
+                                      <img
+                                        src={AnnonceService.getImageUrl(image)}
+                                        alt={`Annonce image ${index + 1}`}
+                                        className="w-full h-full object-cover bg-gray-100"
+                                        onError={(e) => {
+                                          e.target.style.display = 'none';
+                                        }}
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              )
                             )}
                           </div>
                         )}
@@ -1153,26 +1273,103 @@ export default function ProfilePage() {
                       <div className="px-4 py-2 border-t border-gray-100">
                         <div className="flex justify-between">
                           <div className="flex space-x-4">
-                            <button className="flex items-center space-x-1 text-gray-500 hover:text-red-600">
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                            <button
+                              className={`flex items-center space-x-1 ${likedPosts[annonce.ID_POST] ? 'text-red-600' : 'text-gray-500'} hover:text-red-600`}
+                              onClick={() => {
+                                console.log('Like cliqué pour', annonce.ID_POST);
+                                handleLikePost(annonce.ID_POST);
+                              }}
+                            >
+                              <svg
+                                className={`w-5 h-5 ${likedPosts[annonce.ID_POST] ? 'text-red-600 fill-current' : 'text-gray-500'}`}
+                                fill={likedPosts[annonce.ID_POST] ? 'currentColor' : 'none'}
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                                ></path>
                               </svg>
                               <span>{annonce.LIKES_COUNT || 0}</span>
                             </button>
-                            <button className="flex items-center space-x-1 text-gray-500 hover:text-blue-600">
+                            <button
+                              className="flex items-center space-x-1 text-gray-500 hover:text-blue-600"
+                              onClick={() => {
+                                console.log('Commenter cliqué pour', annonce.ID_POST);
+                                toggleComments(annonce.ID_POST);
+                              }}
+                            >
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
                               </svg>
                               <span>{annonce.COMMENTS_COUNT || 0}</span>
                             </button>
                           </div>
-                          <button className="text-gray-500 hover:text-blue-600">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"></path>
-                            </svg>
-                          </button>
+                          
                         </div>
                       </div>
+
+                      {/* Section commentaires */}
+                      {showComments[annonce.ID_POST] && (
+                        <div className="bg-gray-50 p-4 border-t">
+                          <div className="mb-4 space-y-3">
+                            {comments[annonce.ID_POST] && comments[annonce.ID_POST].length > 0 ? (
+                              [...comments[annonce.ID_POST]]
+                                .sort((a, b) => new Date(a.DATE_COMMENTS) - new Date(b.DATE_COMMENTS))
+                                .map(comment => (
+                                  <div key={comment.ID_COMMENT} className="flex items-start space-x-2">
+                                    <div className="w-8 h-8 rounded-full overflow-hidden">
+                                      <img 
+                                        src={comment.AUTHOR_AVATAR || "https://via.placeholder.com/40?text=User"} 
+                                        alt={comment.AUTHOR_NAME} 
+                                        className="w-full h-full object-cover" 
+                                      />
+                                    </div>
+                                    <div className="flex-1 bg-white rounded-lg p-2 shadow-sm">
+                                      <div className="font-medium text-xs">{comment.AUTHOR_NAME}</div>
+                                      <p className="text-sm">{comment.CONTENT}</p>
+                                      <div className="text-xs text-gray-500 mt-1">{comment.TIME_AGO}</div>
+                                    </div>
+                                  </div>
+                                ))
+                            ) : (
+                              <p className="text-center text-gray-500 text-sm">Aucun commentaire pour le moment</p>
+                            )}
+                          </div>
+                          
+                          {/* Formulaire d'ajout de commentaire */}
+                          <div className="flex items-center space-x-2">
+                            <div className="w-8 h-8 rounded-full overflow-hidden">
+                              <img 
+                                src={user?.IMG_PROFIL || "https://via.placeholder.com/40?text=You"} 
+                                alt="Vous" 
+                                className="w-full h-full object-cover" 
+                              />
+                            </div>
+                            <div className="flex-1 relative">
+                              <input 
+                                type="text" 
+                                className="w-full border rounded-full py-1 px-3 pr-10 text-sm" 
+                                placeholder="Ajouter un commentaire..." 
+                                value={commentText[annonce.ID_POST] || ''}
+                                onChange={(e) => handleCommentChange(annonce.ID_POST, e.target.value)}
+                                onKeyPress={(e) => e.key === 'Enter' && handleSubmitComment(annonce.ID_POST)}
+                              />
+                              <button 
+                                className="absolute right-2 top-1 text-blue-500"
+                                onClick={() => handleSubmitComment(annonce.ID_POST)}
+                              >
+                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                  <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path>
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))
                 )}

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import AnnonceService from '../services/AnnonceService';
 import LikeService from '../services/LikeService';
+import CommentService from '../services/CommentService';
 import StoryViewer from './StoryViewer';
 
 export default function Feed() {
@@ -29,6 +30,8 @@ export default function Feed() {
   const [showMediaModal, setShowMediaModal] = useState(false);
   const [currentMedia, setCurrentMedia] = useState({ type: null, src: null });
   const [errors, setErrors] = useState({});
+  const [comments, setComments] = useState({});
+  const [commentText, setCommentText] = useState({});
 
   // Données des posts - chargées depuis l'API
   const [posts, setPosts] = useState([]);
@@ -233,10 +236,17 @@ export default function Feed() {
   };
 
   const toggleComments = (postId) => {
+    const willShow = !showComments[postId];
+    
     setShowComments(prev => ({
       ...prev,
-      [postId]: !prev[postId]
+      [postId]: willShow
     }));
+    
+    // Charger les commentaires si on ouvre la section
+    if (willShow && (!comments[postId] || comments[postId].length === 0)) {
+      loadComments(postId);
+    }
   };
 
   const openStoryViewer = (index) => {
@@ -300,7 +310,7 @@ export default function Feed() {
           if (post.id === postId) {
             return {
               ...post,
-              likes: result.totalLikes
+              LIKES_COUNT: result.totalLikes // pour affichage dynamique
             };
           }
           return post;
@@ -329,6 +339,76 @@ export default function Feed() {
     console.log('Closing media modal');
     setShowMediaModal(false);
     setCurrentMedia({ type: null, src: null });
+  };
+
+  // Fonction pour charger les commentaires d'un post
+  const loadComments = async (postId) => {
+    try {
+      const result = await CommentService.getComments(postId);
+      if (result.success) {
+        setComments(prev => ({
+          ...prev,
+          [postId]: result.comments
+        }));
+      } else {
+        console.error('Erreur lors du chargement des commentaires:', result.error);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des commentaires:', error);
+    }
+  };
+
+  // Fonction pour gérer la saisie du commentaire
+  const handleCommentChange = (postId, text) => {
+    setCommentText(prev => ({
+      ...prev,
+      [postId]: text
+    }));
+  };
+
+  // Fonction pour envoyer un commentaire
+  const handleSubmitComment = async (postId) => {
+    if (!user) {
+      alert('Vous devez être connecté pour commenter');
+      return;
+    }
+
+    const text = commentText[postId]?.trim();
+    if (!text) return;
+
+    try {
+      const result = await CommentService.addComment(user.ID_USER, postId, text);
+      
+      if (result.success) {
+        // Ajouter le nouveau commentaire à la liste
+        setComments(prev => ({
+          ...prev,
+          [postId]: [result.comment, ...(prev[postId] || [])]
+        }));
+        
+        // Réinitialiser le champ de texte
+        setCommentText(prev => ({
+          ...prev,
+          [postId]: ''
+        }));
+        
+        // Mettre à jour le nombre de commentaires dans les posts
+        setPosts(prevPosts => prevPosts.map(post => {
+          if (post.id === postId) {
+            return {
+              ...post,
+              comments: (post.comments || 0) + 1
+            };
+          }
+          return post;
+        }));
+      } else {
+        alert('Erreur lors de l\'ajout du commentaire: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout du commentaire:', error);
+      alert('Erreur lors de l\'ajout du commentaire');
+    }
   };
 
   return (
@@ -875,78 +955,37 @@ export default function Feed() {
             </div>
             
             {/* Images et vidéos en miniature */}
-            <div className="mt-3">
+            <div className="px-3"> {/* Padding horizontal uniquement */}
               {((post.images && post.images.length > 0) || post.image || post.video) && (
-                <div className="flex gap-2 flex-wrap">
-                  {/* Affichage des images multiples */}
-                  {post.images && post.images.length > 0 && post.images.map((image, index) => (
+                <div className="flex w-full gap-0"> {/* flex-row, médias côte à côte, prennent toute la largeur */}
+                  {/* Images */}
+                  {post.images && post.images.map((image, index) => (
                     <div
-                      key={index}
-                      className="relative w-20 h-20 rounded-lg overflow-hidden bg-gray-100 cursor-pointer hover:opacity-80 transition-opacity"
+                      key={"img-" + index}
+                      className="overflow-hidden shadow-lg hover:scale-105 transition-transform cursor-pointer w-72 h-60"
                       onClick={() => openMediaModal('image', image)}
                     >
                       <img
                         src={image}
                         alt={`Post image ${index + 1}`}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover bg-gray-100"
                         onError={(e) => {
                           e.target.style.display = 'none';
                         }}
                       />
-                      <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 transition-all flex items-center justify-center">
-                        <svg className="w-6 h-6 text-white opacity-0 hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                        </svg>
-                      </div>
-                      {/* Indicateur du nombre d'images */}
-                      {index === 0 && post.images.length > 1 && (
-                        <div className="absolute top-1 left-1 bg-black bg-opacity-70 text-white text-xs px-1 rounded">
-                          +{post.images.length - 1}
-                        </div>
-                      )}
                     </div>
                   ))}
-
-                  {/* Affichage d'une seule image (compatibilité) */}
-                  {post.image && !post.images && (
-                    <div
-                      className="relative w-20 h-20 rounded-lg overflow-hidden bg-gray-100 cursor-pointer hover:opacity-80 transition-opacity"
-                      onClick={() => openMediaModal('image', post.image)}
-                    >
-                      <img
-                        src={post.image}
-                        alt="Post image"
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                        }}
-                      />
-                      <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 transition-all flex items-center justify-center">
-                        <svg className="w-6 h-6 text-white opacity-0 hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                        </svg>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Affichage de la vidéo */}
+                  {/* Vidéo */}
                   {post.video && (
                     <div
-                      className="relative w-20 h-20 rounded-lg overflow-hidden bg-gray-100 cursor-pointer hover:opacity-80 transition-opacity"
+                      className="overflow-hidden shadow-lg hover:scale-105 transition-transform cursor-pointer w-72 h-60"
                       onClick={() => openMediaModal('video', post.video)}
                     >
                       <video
                         src={post.video}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                        }}
+                        className="w-full h-full object-cover bg-black"
+                        controls
                       />
-                      <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center">
-                        <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd"></path>
-                        </svg>
-                      </div>
                     </div>
                   )}
                 </div>
@@ -957,7 +996,7 @@ export default function Feed() {
               <div className="flex justify-between">
                 <div className="flex space-x-4">
                   <button 
-                    className="flex items-center space-x-1 text-gray-500 hover:text-red-600"
+                    className={`flex items-center space-x-1 ${likedPosts[post.id] ? 'text-red-600' : 'text-gray-500'} hover:text-red-600`}
                     onClick={() => handleLikePost(post.id)}
                   >
                     <svg 
@@ -973,7 +1012,7 @@ export default function Feed() {
                         d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
                       ></path>
                     </svg>
-                    <span className={likedPosts[post.id] ? 'text-red-600' : ''}>{post.likes}</span>
+                    <span>{post.LIKES_COUNT || 0}</span>
                   </button>
                   <button 
                     className="flex items-center space-x-1 text-gray-500 hover:text-blue-600"
@@ -995,39 +1034,53 @@ export default function Feed() {
             
             {/* Section commentaires */}
             {showComments[post.id] && (
-              <div className="bg-gray-50 p-4 border-t">
-                <div className="mb-4 space-y-3">
-                  <div className="flex items-start space-x-2">
-                    <div className="w-8 h-8 rounded-full overflow-hidden">
-                      <img src="https://via.placeholder.com/40?text=User1" alt="Commentateur" className="w-full h-full object-cover" />
-                    </div>
-                    <div className="flex-1 bg-white rounded-lg p-2 shadow-sm">
-                      <div className="font-medium text-xs">Utilisateur 1</div>
-                      <p className="text-sm">Super photo ! J'adore le cadrage.</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-2">
-                    <div className="w-8 h-8 rounded-full overflow-hidden">
-                      <img src="https://via.placeholder.com/40?text=User2" alt="Commentateur" className="w-full h-full object-cover" />
-                    </div>
-                    <div className="flex-1 bg-white rounded-lg p-2 shadow-sm">
-                      <div className="font-medium text-xs">Utilisateur 2</div>
-                      <p className="text-sm">Très beau contenu, continue comme ça !</p>
-                    </div>
-                  </div>
-                </div>
+              <div className="mt-2 border-t pt-2 px-2 pb-3"> {/* Ajout du padding bottom */}
+                {/* Liste des commentaires */}
+                {comments[post.id] && comments[post.id].length > 0 ? (
+                  [...comments[post.id]]
+                    .sort((a, b) => new Date(a.DATE_COMMENTS) - new Date(b.DATE_COMMENTS))
+                    .map(comment => (
+                      <div key={comment.ID_COMMENT} className="flex items-start space-x-2 mb-2"> {/* Ajout d'un mb-2 pour l'espacement vertical */}
+                        <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+                          <img 
+                            src={comment.AUTHOR_AVATAR || "https://via.placeholder.com/40?text=User"} 
+                            alt={comment.AUTHOR_NAME} 
+                            className="w-full h-full object-cover" 
+                          />
+                        </div>
+                        <div className="flex-1 bg-white rounded-lg p-2 shadow-sm border border-gray-100">
+                          <div className="font-medium text-xs text-gray-800">{comment.AUTHOR_NAME}</div>
+                          <p className="text-sm text-gray-700">{comment.CONTENT}</p>
+                          <div className="text-xs text-gray-500 mt-1">{comment.TIME_AGO}</div>
+                        </div>
+                      </div>
+                    ))
+                ) : (
+                  <p className="text-sm text-gray-500 my-2">Aucun commentaire pour le moment</p>
+                )}
                 
+                {/* Formulaire d'ajout de commentaire */}
                 <div className="flex items-center space-x-2">
                   <div className="w-8 h-8 rounded-full overflow-hidden">
-                    <img src="https://via.placeholder.com/40?text=You" alt="Vous" className="w-full h-full object-cover" />
+                    <img 
+                      src={user?.IMG_PROFIL || "https://via.placeholder.com/40?text=You"} 
+                      alt="Vous" 
+                      className="w-full h-full object-cover" 
+                    />
                   </div>
                   <div className="flex-1 relative">
                     <input 
                       type="text" 
                       className="w-full border rounded-full py-1 px-3 pr-10 text-sm" 
                       placeholder="Ajouter un commentaire..." 
+                      value={commentText[post.id] || ''}
+                      onChange={(e) => handleCommentChange(post.id, e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleSubmitComment(post.id)}
                     />
-                    <button className="absolute right-2 top-1 text-blue-500">
+                    <button 
+                      className="absolute right-2 top-1 text-blue-500"
+                      onClick={() => handleSubmitComment(post.id)}
+                    >
                       <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path>
                       </svg>
