@@ -131,22 +131,40 @@ export default function ProfilePage() {
     }
   };
 
+  // Ajouter cette fonction pour charger les données complètes du profil
+  const loadUserProfile = async () => {
+    if (!user) return;
+    
+    try {
+      const result = await EditProfileService.getUserProfile(user.ID_USER);
+      if (result.success) {
+        setUserProfile(prev => ({
+          ...prev,
+          name: result.user.NOM || prev.name,
+          username: `@${result.user.NOM?.toLowerCase().replace(/\s+/g, '')}` || prev.username,
+          bio: result.user.BIO || prev.bio,
+          location: result.user.LOCALISATION || prev.location,
+          status: result.user.STATUT || prev.status,
+          city: result.user.VILLE || prev.city,
+          age: result.user.AGE || prev.age,
+          email: result.user.EMAIL || prev.email,
+          phone: result.user.TELE || prev.phone,
+          birthday: result.user.DATE_NAISSANCE || prev.birthday,
+          avatar: result.user.IMG_PROFIL ? `http://localhost/localbook/backend/uploads/${result.user.IMG_PROFIL}` : prev.avatar,
+          coverPhoto: result.user.IMG_COUVERT ? `http://localhost/localbook/backend/uploads/${result.user.IMG_COUVERT}` : prev.coverPhoto
+        }));
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement du profil utilisateur:', error);
+    }
+  };
+
   // Mettre à jour le profil quand les données utilisateur changent
   useEffect(() => {
     if (user) {
-      setUserProfile(prev => ({
-        ...prev,
-        name: user.NOM,
-        username: `@${user.NOM.toLowerCase().replace(/\s+/g, '')}`,
-        email: user.EMAIL
-      }));
-      setEditedProfile(prev => ({
-        ...prev,
-        name: user.NOM,
-        username: `@${user.NOM.toLowerCase().replace(/\s+/g, '')}`,
-        email: user.EMAIL
-      }));
-
+      // Charger les données complètes du profil
+      loadUserProfile();
+      
       // Charger les annonces de l'utilisateur
       loadUserAnnonces();
     }
