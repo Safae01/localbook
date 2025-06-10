@@ -264,6 +264,13 @@ export default function SavedPosts() {
                         {post.details.furnishingStatus === 'equipped' ? 'Meublé' : 'Non meublé'}
                       </span>
                     )}
+                    {post.details.amenities && post.details.amenities.map((amenity, index) => (
+                      amenity && (
+                        <span key={index} className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
+                          {amenity}
+                        </span>
+                      )
+                    ))}
                   </div>
                 </div>
 

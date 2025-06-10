@@ -51,23 +51,14 @@ const SavedPostService = {
             return { success: false, error: error.message || 'Erreur de connexion au serveur' };
         }
     },    async getSavedPosts(userId) {
-        if (!userId) {
-            console.error('No userId provided');
-            return { success: false, error: 'ID utilisateur manquant' };
-        }
-
         try {
             const response = await fetch(`${API_BASE_URL}/get.php?user_id=${userId}`);
             const data = await response.json();
             
-            if (!response.ok) {
-                throw new Error(data.error || 'Failed to fetch saved posts');
-            }
-            
             const transformedPosts = data.posts.map(post => ({
                 id: post.ID_POST,
                 author: post.AUTEUR_NOM,
-                avatar: post.AUTEUR_AVATAR ? `http://localhost/localbook/backend/api/Uploads/users/${post.AUTEUR_AVATAR}` : "https://via.placeholder.com/40",
+                avatar: post.AUTEUR_AVATAR ? `http://localhost/localbook/backend/api/Uploads/users/${post.AUTEUR_AVATAR}` : null,
                 time: post.TIME_AGO,
                 content: post.DESCRIPTION,
                 images: post.POST_IMG ? [`http://localhost/localbook/backend/api/Uploads/posts/${post.POST_IMG}`] : [],
@@ -84,17 +75,14 @@ const SavedPostService = {
                     rooms: post.NBRE_PIECE,
                     furnishingStatus: post.ETAT,
                     durationType: post.DUREE,
-                    amenities: post.EQUIPEMENT ? post.EQUIPEMENT.split(',') : []
+                    amenities: post.EQUIPEMENT ? post.EQUIPEMENT.split(',').map(item => item.trim()) : []
                 }
             }));
             
-            return {
-                success: true,
-                posts: transformedPosts
-            };
+            return { success: true, posts: transformedPosts };
         } catch (error) {
             console.error('getSavedPosts error:', error);
-            return { success: false, error: 'Erreur lors du chargement des posts sauvegardés' };
+            return { success: false, error: 'Erreur lors du chargement' };
         }
     },
 
