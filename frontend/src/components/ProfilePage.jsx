@@ -790,7 +790,7 @@ export default function ProfilePage() {
                 
                 {/* Localisation */}
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Localisation (ville)</label>
+                  <label className="block text-sm font-medium text-gray-700">Ville</label>
                   <input 
                     type="text" 
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 transition-colors hover:border-blue-300"

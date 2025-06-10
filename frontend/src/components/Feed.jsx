@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import AnnonceService from '../services/AnnonceService';
 import LikeService from '../services/LikeService';
 import CommentService from '../services/CommentService';
+import SavedPostService from '../services/SavedPostService';
 import StoryViewer from './StoryViewer';
 
 export default function Feed() {
@@ -32,6 +33,7 @@ export default function Feed() {
   const [errors, setErrors] = useState({});
   const [comments, setComments] = useState({});
   const [commentText, setCommentText] = useState({});
+  const [savedPosts, setSavedPosts] = useState({}); // Pour suivre l'état des posts sauvegardés
 
   // Données des posts - chargées depuis l'API
   const [posts, setPosts] = useState([]);
@@ -40,6 +42,21 @@ export default function Feed() {
   useEffect(() => {
     loadAnnonces();
   }, []);
+
+  // Ajouter ce nouvel useEffect pour initialiser les posts sauvegardés
+  useEffect(() => {
+    const initializeSavedPosts = async () => {
+      if (user && posts.length > 0) {
+        const postIds = posts.map(post => post.id);
+        const result = await SavedPostService.checkSavedPosts(user.ID_USER, postIds);
+        if (result.success) {
+          setSavedPosts(result.savedPosts);
+        }
+      }
+    };
+
+    initializeSavedPosts();
+  }, [user, posts]);
 
   const loadAnnonces = async () => {
     setLoading(true);
@@ -155,7 +172,43 @@ export default function Feed() {
     setErrors({});
 
     if (!user) {
-      alert('Vous devez être connecté pour créer une annonce');
+
+      const handleSavePost = async (postId) => {
+          if (!user) return;
+          
+          try {
+              const result = await SavedPostService.savePost(user.ID_USER, postId);
+              
+              if (result.success) {
+                  setSavedPosts(prev => ({
+                      ...prev,
+                      [postId]: !prev[postId]
+                  }));
+              } else {
+                  console.error('Save error:', result.error);
+              }
+          } catch (error) {
+              console.error('Erreur lors de la sauvegarde du post:', error);
+          }
+      };
+      
+      // Et remplacez le bouton de sauvegarde dans le JSX :
+      <button 
+          onClick={() => handleSavePost(post.id)}
+          className={`absolute top-3 right-3 text-gray-500 hover:text-blue-600 bg-white rounded-full p-1 shadow ${
+              savedPosts[post.id] ? 'text-blue-600' : ''
+          }`}
+      >
+          <svg 
+              className="w-5 h-5" 
+              fill={savedPosts[post.id] ? "currentColor" : "none"}
+              stroke="currentColor" 
+              viewBox="0 0 20 20"
+          >
+              <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z"></path>
+          </svg>
+      </button>
+      ('Vous devez être connecté pour créer une annonce');
       return;
     }
 
@@ -228,12 +281,34 @@ export default function Feed() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleSavePost = (postId) => {
-    console.log('Post sauvegardé:', postId);
-    // Logique pour sauvegarder un post
-  };
+  };  
+ const handleSavePost = async (postId) => {
+    if (!user) return;
+    
+    try {
+        const isCurrentlySaved = savedPosts[postId];
+        const result = isCurrentlySaved 
+            ? await SavedPostService.unsavePost(user.ID_USER, postId)
+            : await SavedPostService.savePost(user.ID_USER, postId);
+        
+        if (result.success) {
+            setSavedPosts(prev => ({
+                ...prev,
+                [postId]: !isCurrentlySaved
+            }));
+            
+            // Ajouter un retour visuel
+            const message = isCurrentlySaved 
+                ? 'Post retiré des sauvegardes'
+                : 'Post sauvegardé';
+            console.log(message);
+        } else {
+            console.error('Toggle save error:', result.error);
+        }
+    } catch (error) {
+        console.error('Erreur lors de la gestion de la sauvegarde:', error);
+    }
+};
 
   const toggleComments = (postId) => {
     const willShow = !showComments[postId];
@@ -880,13 +955,22 @@ export default function Feed() {
           posts.map(post => (
           <div key={post.id} className="bg-white rounded-lg shadow overflow-hidden relative">
             <button 
-              onClick={() => handleSavePost(post.id)}
-              className="absolute top-3 right-3 text-gray-500 hover:text-blue-600 bg-white rounded-full p-1 shadow"
-            >
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z"></path>
-              </svg>
-            </button>
+    onClick={() => handleSavePost(post.id)}
+    className={`absolute top-3 right-3 z-10 p-2 rounded-full bg-white shadow-md hover:bg-gray-100 transition-all ${
+        savedPosts[post.id] ? 'text-blue-600' : 'text-gray-500'
+    }`}
+>
+    <svg 
+        className="w-5 h-5" 
+        fill={savedPosts[post.id] ? "currentColor" : "none"}
+        stroke="currentColor" 
+        viewBox="0 0 24 24" 
+    >
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
+            d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 18V5z">
+        </path>
+    </svg>
+</button>
             
             <div className="p-4">
               <div className="flex items-center space-x-3">
@@ -1024,11 +1108,7 @@ export default function Feed() {
                     <span>{post.comments}</span>
                   </button>
                 </div>
-                <button className="text-gray-500 hover:text-blue-600">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path>
-                  </svg>
-                </button>
+                
               </div>
             </div>
             
@@ -1346,7 +1426,29 @@ export default function Feed() {
                 
                 {/* Images */}
                 <div className="space-y-3">
-                  <label className="block text-sm font-medium text-gray-700">Images</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Images <span className="text-red-500">*</span>
+                    <span className="text-xs text-gray-500 font-normal">(Au moins une image ou une vidéo requise)</span>
+                  </label>
+                  {images.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-2 justify-center -mt-1 pb-4">
+                      {images.map((img, index) => (
+                        <div key={index} className="relative w-20 h-20">
+                          <img src={img} alt="" className="w-full h-full object-cover rounded-lg" />
+                          <button
+                            type="button"
+                            className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center"
+                            onClick={() => {
+                              setImages(images.filter((_, i) => i !== index));
+                              setImageFiles(imageFiles.filter((_, i) => i !== index));
+                            }}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-xl hover:border-blue-400 transition-colors">
                     <div className="space-y-1 text-center">
                       <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
@@ -1370,33 +1472,19 @@ export default function Feed() {
                       <p className="text-xs text-gray-500">PNG, JPG, GIF jusqu'à 10MB</p>
                     </div>
                   </div>
-                  
-                  {/* Aperçu des images */}
-                  {images.length > 0 && (
-                    <div className="grid grid-cols-3 gap-2 mt-2">
-                      {images.map((img, index) => (
-                        <div key={index} className="relative rounded-xl overflow-hidden h-24 group">
-                          <img src={img} alt={`Preview ${index}`} className="w-full h-full object-cover" />
-                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
-                            <button 
-                              type="button"
-                              className="opacity-0 group-hover:opacity-100 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 focus:outline-none transition-opacity"
-                              onClick={() => setImages(images.filter((_, i) => i !== index))}
-                            >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                  {errors.images && (
+                    <p className="text-red-500 text-sm mt-1 font-bold border border-red-300 p-2 bg-red-50 rounded">
+                      ❌ {errors.images}
+                    </p>
                   )}
                 </div>
                 
                 {/* Vidéo */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Vidéo</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Vidéo <span className="text-red-500">*</span>
+                    <span className="text-xs text-gray-500 font-normal">(Ou au moins une image requise)</span>
+                  </label>
                   <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed hover:border-blue-400 rounded-md">
                     <div className="space-y-1 text-center">
                       <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1413,26 +1501,36 @@ export default function Feed() {
                     </div>
                   </div>
                   {video && (
-                    <div className="mt-2 relative">
-                      <video src={video} controls className="w-full h-48 object-cover rounded"></video>
-                      <button 
-                        type="button"
-                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
-                        onClick={() => setVideo(null)}
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
+                    <div className="mt-2 flex justify-center -mt-1 pb-4">
+                      <div className="relative w-full max-w-md">
+                        <video src={video} controls className="w-full h-48 object-cover rounded"></video>
+                        <button
+                          type="button"
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
+                          onClick={() => {
+                            setVideo(null);
+                            setVideoFile(null);
+                          }}
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
+                  )}
+                  {errors.video && (
+                    <p className="text-red-500 text-sm mt-1 font-bold border border-red-300 p-2 bg-red-50 rounded">
+                      ❌ {errors.video}
+                    </p>
                   )}
                 </div>
               </div>
               
               {/* Bouton de soumission */}
               <div className="flex justify-end">
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   className="w-full py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                 >
                   Publier
