@@ -26,6 +26,8 @@ export default function ProfilePage() {
   const [amenities, setAmenities] = useState([]);
   const [images, setImages] = useState([]);
   const [video, setVideo] = useState(null);
+  const [rawImages, setRawImages] = useState([]);
+  const [rawVideo, setRawVideo] = useState(null);
   const [userAnnonces, setUserAnnonces] = useState([]);
   const [loadingAnnonces, setLoadingAnnonces] = useState(false);
 
@@ -149,9 +151,8 @@ export default function ProfilePage() {
           age: result.user.AGE || prev.age,
           email: result.user.EMAIL || prev.email,
           phone: result.user.TELE || prev.phone,
-          birthday: result.user.DATE_NAISSANCE || prev.birthday,
-          avatar: result.user.IMG_PROFIL ? `http://localhost/localbook/backend/uploads/${result.user.IMG_PROFIL}` : prev.avatar,
-          coverPhoto: result.user.IMG_COUVERT ? `http://localhost/localbook/backend/uploads/${result.user.IMG_COUVERT}` : prev.coverPhoto
+          birthday: result.user.DATE_NAISSANCE || prev.birthday,          avatar: result.user.IMG_PROFIL ? EditProfileService.getProfileImageUrl(result.user.IMG_PROFIL) : prev.avatar,
+          coverPhoto: result.user.IMG_COUVERT ? EditProfileService.getCoverImageUrl(result.user.IMG_COUVERT) : prev.coverPhoto
         }));
       }
     } catch (error) {
@@ -216,7 +217,6 @@ export default function ProfilePage() {
     e.preventDefault();
     
     try {
-      // Appeler le service de mise à jour
       const result = await EditProfileService.updateProfile(
         user.ID_USER,
         {
@@ -236,12 +236,12 @@ export default function ProfilePage() {
       );
 
       if (result.success) {
-        // Mettre à jour le profil avec les nouvelles valeurs
+        // Mettre à jour le profil avec les URLs correctes des images
         setUserProfile({
           ...userProfile,
           ...editedProfile,
-          avatar: avatarPreview,
-          coverPhoto: coverPhotoPreview
+          avatar: result.user.IMG_PROFIL ? EditProfileService.getProfileImageUrl(result.user.IMG_PROFIL) : userProfile.avatar,
+          coverPhoto: result.user.IMG_COUVERT ? EditProfileService.getCoverImageUrl(result.user.IMG_COUVERT) : userProfile.coverPhoto
         });
         
         // Fermer le formulaire
@@ -250,6 +250,9 @@ export default function ProfilePage() {
         // Réinitialiser les fichiers
         setAvatarFile(null);
         setCoverPhotoFile(null);
+        
+        // Recharger les données du profil pour s'assurer d'avoir les dernières informations
+        loadUserProfile();
       } else {
         alert('Erreur lors de la mise à jour du profil : ' + result.error);
       }
@@ -280,60 +283,77 @@ export default function ProfilePage() {
   const handleImageUpload = (e) => {
     // Simuler l'upload d'images
     if (e.target.files) {
-      const newImages = Array.from(e.target.files).map(file => URL.createObjectURL(file));
-      setImages([...images, ...newImages]);
+      const files = Array.from(e.target.files);
+      const newImageUrls = files.map(file => URL.createObjectURL(file));
+      setImages(prevImages => [...prevImages, ...newImageUrls]);
+      setRawImages(prevRawImages => [...prevRawImages, ...files]); // Store raw files
     }
   };
 
   const handleVideoUpload = (e) => {
     // Simuler l'upload de vidéo
     if (e.target.files && e.target.files[0]) {
-      setVideo(URL.createObjectURL(e.target.files[0]));
+      const file = e.target.files[0];
+      setVideo(URL.createObjectURL(file));
+      setRawVideo(file); // Store raw file
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Créer une nouvelle annonce
-    const newPost = {
-      id: Date.now(), // Utiliser timestamp comme ID unique
-      author: userProfile.name, // Nom de l'utilisateur connecté
-      avatar: userProfile.avatar,
-      time: 'à l\'instant',
-      content: `${postType} à ${location} - ${price}€/mois - ${area}m² - ${rooms} pièces - ${furnishingStatus === 'equipped' ? 'Meublé' : 'Non meublé'}`,
-      image: images.length > 0 ? images[0] : null,
-      video: video,
-      likes: 0,
-      comments: 0,
-      // Ajouter les détails spécifiques à l'annonce
-      details: {
-        postType,
-        location,
-        durationType,
-        price,
-        area,
-        rooms,
-        furnishingStatus,
-        amenities
+
+    if (!user) {
+      alert('Vous devez être connecté pour publier une annonce');
+      return;
+    }
+
+    try {
+      // Préparer les données de l'annonce comme dans Feed.jsx
+      const postData = {
+        ID_USER: user.ID_USER,
+        TYPE_LOC: postType,
+        VILLE: location,
+        QUARTIER: quartier,
+        DUREE: durationType === 'courte' ? 'courte durée' : 'longue durée',
+        PRIX: price,
+        SURFACE: area,
+        NBRE_PIECE: rooms,
+        ETAT: furnishingStatus === 'equipped' ? 'meuble' : 'non_meuble',
+        DESCRIPTION: "",
+        equipements: amenities
+      };
+
+      // Créer l'annonce en utilisant la même fonction que dans Feed.jsx
+      const result = await AnnonceService.createAnnonce(postData, rawImages, rawVideo);
+
+      if (result.success) {
+        // Réinitialiser le formulaire
+        setShowPostForm(false);
+        setPostType('');
+        setLocation('');
+        setQuartier('');
+        setDurationType('');
+        setPrice('');
+        setArea('');
+        setRooms('');
+        setFurnishingStatus('');
+        setAmenities([]);
+        setImages([]);
+        setVideo(null);
+        setRawImages([]);
+        setRawVideo(null);
+        
+        // Recharger les annonces de l'utilisateur
+        await loadUserAnnonces();
+        
+        alert('Annonce créée avec succès !');
+      } else {
+        alert('Erreur lors de la création de l\'annonce: ' + result.error);
       }
-    };
-    
-    console.log("Nouvelle annonce créée:", newPost);
-    
-    // Réinitialiser le formulaire
-    setShowPostForm(false);
-    setPostType('');
-    setLocation('');
-    setQuartier('');
-    setDurationType('');
-    setPrice('');
-    setArea('');
-    setRooms('');
-    setFurnishingStatus('');
-    setAmenities([]);
-    setImages([]);
-    setVideo(null);
+    } catch (error) {
+      console.error('Erreur lors de la création de l\'annonce:', error);
+      alert('Une erreur est survenue lors de la publication de l\'annonce');
+    }
   };
 
   // Ajouter les mêmes états et fonctions que dans Feed.jsx
@@ -1005,8 +1025,14 @@ export default function ProfilePage() {
                                 type="button"
                                 className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1"
                                 onClick={() => {
-                                  if (isVideo) setVideo(null);
-                                  else setImages(images.filter((_, i) => i !== index));
+                                  if (isVideo) {
+                                    setVideo(null);
+                                    setRawVideo(null); // Also remove raw file
+                                  }
+                                  else {
+                                    setImages(images.filter((_, i) => i !== index));
+                                    setRawImages(rawImages.filter((_, i) => i !== index)); // Also remove raw file
+                                  }
                                 }}
                               >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1423,7 +1449,7 @@ export default function ProfilePage() {
                     onChange={(e) => setSearchFollowers(e.target.value)}
                   />
                   <svg className="w-5 h-5 text-gray-500 absolute left-3 top-2.5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path>
+                    <path fillRule="evenodd" d="M8 4a4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path>
                   </svg>
                 </div>
               </div>
@@ -1472,7 +1498,7 @@ export default function ProfilePage() {
                     onChange={(e) => setSearchFollowing(e.target.value)}
                   />
                   <svg className="w-5 h-5 text-gray-500 absolute left-3 top-2.5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path>
+                    <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" clipRule="evenodd"></path>
                   </svg>
                 </div>
               </div>

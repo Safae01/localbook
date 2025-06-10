@@ -1,4 +1,3 @@
-
 const API_BASE_URL = 'http://localhost/localbook/backend/api';
 
 const EditProfileService = {
@@ -65,17 +64,16 @@ const EditProfileService = {
       };
     }
   },
-  
-  // Helper pour obtenir l'URL de l'image de profil
+    // Helper pour obtenir l'URL de l'image de profil
   getProfileImageUrl(imageName) {
     if (!imageName) return 'https://via.placeholder.com/150';
-    return `http://localhost/localbook/backend/api/Uploads/${imageName}`;
+    return `${API_BASE_URL}/uploads/${imageName}`;
   },
   
   // Helper pour obtenir l'URL de l'image de couverture
   getCoverImageUrl(imageName) {
     if (!imageName) return 'https://via.placeholder.com/1200x300';
-    return `http://localhost/localbook/backend/api/Uploads/${imageName}`;
+    return `${API_BASE_URL}/uploads/${imageName}`;
   },
 };
 
