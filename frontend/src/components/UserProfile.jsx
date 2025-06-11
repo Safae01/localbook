@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import FollowService from '../services/FollowService';
+import UserPostService from '../services/UserPostService';
+import LikeService from '../services/LikeService';
+import SavedPostService from '../services/SavedPostService';
+import CommentService from '../services/CommentService';
 import { useAuth } from '../context/AuthContext';
 
 export default function UserProfile({ user, onBack }) {
@@ -10,6 +14,12 @@ export default function UserProfile({ user, onBack }) {
   const [followLoading, setFollowLoading] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
+  const [posts, setPosts] = useState([]);
+  const [postsLoading, setPostsLoading] = useState(true);
+  const [comments, setComments] = useState({});
+  const [newComment, setNewComment] = useState({});
+  const [mediaModal, setMediaModal] = useState({ isOpen: false, type: null, src: null });
+  const [savedPosts, setSavedPosts] = useState({});
   const { user: currentUser } = useAuth();
 
   // Vérifier l'état de follow au chargement
@@ -36,6 +46,49 @@ export default function UserProfile({ user, onBack }) {
 
     checkFollowStatus();
   }, [currentUser, user]);
+
+  // Charger les posts de l'utilisateur
+  useEffect(() => {
+    const loadUserPosts = async () => {
+      if (!user || !user.id) {
+        setPostsLoading(false);
+        return;
+      }
+
+      try {
+        setPostsLoading(true);
+        const response = await UserPostService.getUserPosts(user.id, currentUser?.ID_USER);
+
+        if (response.success) {
+          setPosts(response.posts);
+
+          // Initialiser l'état des likes
+          const initialLikedPosts = {};
+          response.posts.forEach(post => {
+            initialLikedPosts[post.id] = post.isLiked;
+          });
+          setLikedPosts(prev => ({ ...prev, ...initialLikedPosts }));
+
+          // Charger l'état des sauvegardes si l'utilisateur est connecté
+          if (currentUser?.ID_USER) {
+            const postIds = response.posts.map(post => post.id);
+            const savedResponse = await SavedPostService.checkSavedPosts(currentUser.ID_USER, postIds);
+            if (savedResponse.success) {
+              setSavedPosts(prev => ({ ...prev, ...savedResponse.savedPosts }));
+            }
+          }
+        } else {
+          console.error('Error loading user posts:', response.error);
+        }
+      } catch (error) {
+        console.error('Error loading user posts:', error);
+      } finally {
+        setPostsLoading(false);
+      }
+    };
+
+    loadUserPosts();
+  }, [user, currentUser]);
 
   // Vérifier si l'utilisateur existe
   if (!user) {
@@ -106,60 +159,149 @@ export default function UserProfile({ user, onBack }) {
     }
   };
 
-  const toggleComments = (postId) => {
+
+
+  const handleSavePost = async (postId) => {
+    if (!currentUser) return;
+
+    try {
+      const isSaved = savedPosts[postId];
+      let result;
+
+      if (isSaved) {
+        // Unsave le post
+        result = await SavedPostService.unsavePost(currentUser.ID_USER, postId);
+        if (result.success) {
+          setSavedPosts(prev => ({
+            ...prev,
+            [postId]: false
+          }));
+          console.log('Post retiré des sauvegardes');
+        }
+      } else {
+        // Save le post
+        result = await SavedPostService.savePost(currentUser.ID_USER, postId);
+        if (result.success) {
+          setSavedPosts(prev => ({
+            ...prev,
+            [postId]: true
+          }));
+          console.log('Post sauvegardé avec succès');
+        }
+      }
+
+      if (!result.success) {
+        console.error('Erreur lors de la sauvegarde:', result.error);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+    }
+  };
+
+  const handleLikePost = async (postId) => {
+    if (!currentUser) return;
+
+    try {
+      const result = await LikeService.toggleLike(currentUser.ID_USER, postId);
+
+      if (result.success) {
+        // Mettre à jour l'état local des likes
+        setLikedPosts(prev => ({
+          ...prev,
+          [postId]: result.isLiked
+        }));
+
+        // Mettre à jour le nombre de likes dans les posts
+        setPosts(prevPosts => prevPosts.map(post => {
+          if (post.id === postId) {
+            return {
+              ...post,
+              likes: result.totalLikes
+            };
+          }
+          return post;
+        }));
+      } else {
+        console.error('Erreur lors du like:', result.error);
+      }
+    } catch (error) {
+      console.error('Erreur lors du like:', error);
+    }
+  };
+
+  const toggleComments = async (postId) => {
     setShowComments(prev => ({
       ...prev,
       [postId]: !prev[postId]
     }));
-  };
 
-  const handleSavePost = (postId) => {
-    // Logique pour sauvegarder un post
-    console.log('Post sauvegardé:', postId);
-  };
-
-  const handleLikePost = (postId) => {
-    setLikedPosts(prev => {
-      const isLiked = prev[postId];
-      
-      // Si user.posts est un état ou une prop modifiable, mettez à jour les likes
-      if (user && user.posts) {
-        // Créez une copie de user pour ne pas modifier directement la prop
-        const updatedUser = {
-          ...user,
-          posts: user.posts.map(post => {
-            if (post.id === postId) {
-              return {
-                ...post,
-                likes: isLiked ? post.likes - 1 : post.likes + 1
-              };
-            }
-            return post;
-          })
-        };
-        
-        // Si vous avez une fonction pour mettre à jour l'utilisateur, utilisez-la ici
-        // Par exemple: setUser(updatedUser) ou onUserUpdate(updatedUser)
+    // Charger les commentaires si ce n'est pas déjà fait
+    if (!comments[postId] && !showComments[postId]) {
+      try {
+        const result = await CommentService.getComments(postId);
+        if (result.success) {
+          setComments(prev => ({
+            ...prev,
+            [postId]: result.comments
+          }));
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des commentaires:', error);
       }
-      
-      return {
-        ...prev,
-        [postId]: !isLiked
-      };
-    });
+    }
   };
 
-  const handleUserClick = (userId) => {
-    // Si vous avez une fonction pour naviguer vers le profil d'un utilisateur
-    // fournie par les props, utilisez-la
-    if (props.onNavigateToUser) {
-      props.onNavigateToUser(userId);
-    } else {
-      // Sinon, vous pouvez implémenter une logique par défaut
-      console.log("Navigation vers le profil de l'utilisateur:", userId);
-      // Par exemple, si vous utilisez React Router:
-      // history.push(`/user/${userId}`);
+  const handleAddComment = async (postId) => {
+    if (!currentUser || !newComment[postId]?.trim()) return;
+
+    try {
+      const result = await CommentService.addComment(currentUser.ID_USER, postId, newComment[postId]);
+      if (result.success) {
+        // Créer un commentaire formaté pour l'affichage immédiat
+        const newCommentObj = {
+          ID_COMMENT: Date.now(), // ID temporaire
+          AUTHOR_NAME: currentUser.NOM,
+          AUTHOR_AVATAR: currentUser.IMG_PROFIL,
+          CONTENT: newComment[postId],
+          TIME_AGO: 'à l\'instant'
+        };
+
+        // Ajouter le nouveau commentaire à la liste
+        setComments(prev => ({
+          ...prev,
+          [postId]: [...(prev[postId] || []), newCommentObj]
+        }));
+
+        // Vider le champ de commentaire
+        setNewComment(prev => ({
+          ...prev,
+          [postId]: ''
+        }));
+
+        // Mettre à jour le nombre de commentaires
+        setPosts(prevPosts => prevPosts.map(post => {
+          if (post.id === postId) {
+            return {
+              ...post,
+              comments: post.comments + 1
+            };
+          }
+          return post;
+        }));
+      } else {
+        console.error('Erreur lors de l\'ajout du commentaire:', result.error);
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout du commentaire:', error);
     }
+  };
+
+  const openMediaModal = (type, src) => {
+    setMediaModal({ isOpen: true, type, src });
+  };
+
+  const closeMediaModal = () => {
+    setMediaModal({ isOpen: false, type: null, src: null });
   };
 
   return (
@@ -233,13 +375,13 @@ export default function UserProfile({ user, onBack }) {
               
               <div className="mt-4 flex space-x-6 text-sm">
                 <div>
-                  <span className="font-semibold">{user.posts?.length || 0}</span> publications
+                  <span className="font-semibold">{posts.length}</span> publications
                 </div>
                 <div>
-                  <span className="font-semibold">{user.followers || 245}</span> abonnés
+                  <span className="font-semibold">{user.followers || 0}</span> abonnés
                 </div>
                 <div>
-                  <span className="font-semibold">{user.following || 183}</span> abonnements
+                  <span className="font-semibold">{user.following || 0}</span> abonnements
                 </div>
               </div>
             </div>
@@ -249,151 +391,288 @@ export default function UserProfile({ user, onBack }) {
         {/* Publications */}
         <div className="p-4">
           <h3 className="font-medium text-gray-800 mb-4">Publications</h3>
-          
-          {user.posts && user.posts.length > 0 ? (
-            <div className="space-y-4">
-              {user.posts.map(post => (
-                <div key={post.id} className="bg-white rounded-lg shadow overflow-hidden relative">
-                  <button 
-                    onClick={() => handleSavePost(post.id)}
-                    className="absolute top-3 right-3 text-gray-500 hover:text-blue-600 bg-white rounded-full p-1 shadow"
-                  >
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z"></path>
-                    </svg>
-                  </button>
-                  
-                  <div className="p-4">
-                    <div className="flex items-center space-x-3 mb-3">
+
+          {postsLoading ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            </div>
+          ) : posts && posts.length > 0 ? (
+            <div className="space-y-6">
+              {posts.map(post => (
+                <div key={post.id} className="bg-white rounded-lg shadow-sm border border-gray-100">
+                  {/* En-tête du post */}
+                  <div className="flex items-center justify-between p-4">
+                    <div className="flex items-center space-x-3">
                       <div className="w-10 h-10 rounded-full overflow-hidden">
-                        <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                        <img src={post.avatar} alt={post.author} className="w-full h-full object-cover" />
                       </div>
                       <div>
-                        <div 
-                          className="font-medium cursor-pointer hover:underline text-blue-600"
-                          onClick={() => handleUserClick(post.userId || user.id)}
-                        >
-                          {user.name}
-                        </div>
+                        <div className="font-medium text-gray-900">{post.author}</div>
                         <div className="text-xs text-gray-500">{post.time}</div>
                       </div>
                     </div>
-                    
-                    <p className="mt-3">{post.content}</p>
+                    <button
+                      onClick={() => handleSavePost(post.id)}
+                      className={`z-10 p-2 rounded-full bg-white shadow-md hover:bg-gray-100 transition-all ${
+                        savedPosts[post.id] ? 'text-blue-600' : 'text-gray-500'
+                      }`}
+                    >
+                      <svg
+                        className="w-5 h-5"
+                        fill={savedPosts[post.id] ? "currentColor" : "none"}
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                            d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 18V5z">
+                        </path>
+                      </svg>
+                    </button>
                   </div>
-                  
-                  {post.image && (
-                    <div className="relative">
-                      <img src={post.image} alt="" className="w-full h-64 object-cover" />
-                      {post.video && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <button className="bg-white bg-opacity-75 rounded-full p-3">
-                            <svg className="w-8 h-8 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd"></path>
-                            </svg>
-                          </button>
-                        </div>
-                      )}
+
+                 
+
+                  {/* Tags colorés pour les détails de l'annonce */}
+                  {post.details && (
+                    <div className="px-4 pb-3">
+                      <div className="flex flex-wrap gap-2">
+                        {post.details.postType && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {post.details.postType}
+                          </span>
+                        )}
+                        {post.details.location && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                            {post.details.location}
+                          </span>
+                        )}
+                        {post.details.quartier && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            {post.details.quartier}
+                          </span>
+                        )}
+                        {post.details.price && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            {Number(post.details.price).toLocaleString()}€
+                          </span>
+                        )}
+                        {post.details.area && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                            {post.details.area}m²
+                          </span>
+                        )}
+                        {post.details.rooms && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            {post.details.rooms} pièces
+                          </span>
+                        )}
+                        {post.details.furnishingStatus && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-pink-100 text-pink-800">
+                            {post.details.furnishingStatus === 'Meublé' ? 'Meublé' : 'Non meublé'}
+                          </span>
+                        )}
+                        {post.details.equipment && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
+                            {post.details.equipment}
+                          </span>
+                        )}
+                        {post.details.duration && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                            {post.details.duration}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   )}
                   
-                  <div className="px-4 py-2 border-t border-gray-100">
-                    <div className="flex justify-between">
-                      <div className="flex space-x-4">
-                        <button 
-                          className="flex items-center space-x-1 text-gray-500 hover:text-red-600"
+                  {/* Médias côte à côte comme dans le Feed */}
+                  <div className="px-3">
+                    {((post.images && post.images.length > 0) || post.video) && (
+                      <div className="flex w-full gap-0">
+                        {/* Images */}
+                        {post.images && post.images.map((image, index) => (
+                          <div
+                            key={"img-" + index}
+                            className="overflow-hidden shadow-lg hover:scale-105 transition-transform cursor-pointer w-72 h-60"
+                            onClick={() => openMediaModal('image', image)}
+                          >
+                            <img
+                              src={image}
+                              alt={`Post image ${index + 1}`}
+                              className="w-full h-full object-cover bg-gray-100"
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                              }}
+                            />
+                          </div>
+                        ))}
+                        {/* Vidéo */}
+                        {post.video && (
+                          <div
+                            className="overflow-hidden shadow-lg hover:scale-105 transition-transform cursor-pointer w-72 h-60"
+                            onClick={() => openMediaModal('video', post.video)}
+                          >
+                            <video
+                              src={post.video}
+                              className="w-full h-full object-cover bg-black"
+                              controls
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Actions */}
+                  <div className="px-4 py-3 border-t border-gray-100">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-6">
+                        <button
+                          className={`flex items-center space-x-2 transition-colors ${
+                            likedPosts[post.id] ? 'text-red-500' : 'text-gray-500 hover:text-red-500'
+                          }`}
                           onClick={() => handleLikePost(post.id)}
                         >
-                          <svg 
-                            className={`w-5 h-5 ${likedPosts[post.id] ? 'text-red-600 fill-current' : 'text-gray-500'}`} 
-                            fill={likedPosts[post.id] ? 'currentColor' : 'none'} 
-                            stroke="currentColor" 
+                          <svg
+                            className="w-6 h-6"
+                            fill={likedPosts[post.id] ? 'currentColor' : 'none'}
+                            stroke="currentColor"
                             viewBox="0 0 24 24"
                           >
-                            <path 
-                              strokeLinecap="round" 
-                              strokeLinejoin="round" 
-                              strokeWidth="2" 
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
                               d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                            ></path>
+                            />
                           </svg>
-                          <span className={likedPosts[post.id] ? 'text-red-600' : ''}>{post.likes}</span>
+                          <span className="text-sm font-medium">{post.likes}</span>
                         </button>
-                        <button 
-                          className="flex items-center space-x-1 text-gray-500 hover:text-blue-600"
+
+                        <button
+                          className="flex items-center space-x-2 text-gray-500 hover:text-blue-500 transition-colors"
                           onClick={() => toggleComments(post.id)}
                         >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                           </svg>
-                          <span>{post.comments}</span>
+                          <span className="text-sm font-medium">{post.comments}</span>
                         </button>
                       </div>
-                      <button className="text-gray-500 hover:text-blue-600">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path>
-                        </svg>
-                      </button>
                     </div>
                   </div>
                   
                   {/* Section commentaires */}
                   {showComments[post.id] && (
-                    <div className="bg-gray-50 p-4 border-t">
-                      <div className="mb-4 space-y-3">
-                        <div className="flex items-start space-x-2">
-                          <div className="w-8 h-8 rounded-full overflow-hidden">
-                            <img src="https://via.placeholder.com/40?text=User1" alt="Commentateur" className="w-full h-full object-cover" />
+                    <div className="bg-gray-50 px-4 py-3 border-t border-gray-100">
+                      {/* Liste des commentaires */}
+                      {comments[post.id] && comments[post.id].length > 0 && (
+                        <div className="mb-4 space-y-3">
+                          {comments[post.id].map((comment, index) => (
+                            <div key={comment.ID_COMMENT || index} className="flex items-start space-x-3">
+                              <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+                                <img
+                                  src={comment.AUTHOR_AVATAR ? `http://localhost/localbook/backend/api/Uploads/users/${comment.AUTHOR_AVATAR}` : "https://via.placeholder.com/32"}
+                                  alt={comment.AUTHOR_NAME}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <div className="flex-1 bg-white rounded-lg p-3 shadow-sm">
+                                <div className="font-medium text-sm text-gray-900">{comment.AUTHOR_NAME}</div>
+                                <p className="text-sm text-gray-700 mt-1">{comment.CONTENT}</p>
+                                <div className="text-xs text-gray-500 mt-1">{comment.TIME_AGO}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Formulaire d'ajout de commentaire */}
+                      {currentUser && (
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+                            <img
+                              src={currentUser.IMG_PROFIL ? `http://localhost/localbook/backend/api/Uploads/users/${currentUser.IMG_PROFIL}` : "https://via.placeholder.com/32"}
+                              alt="Vous"
+                              className="w-full h-full object-cover"
+                            />
                           </div>
-                          <div className="flex-1 bg-white rounded-lg p-2 shadow-sm">
-                            <div className="font-medium text-xs">Utilisateur 1</div>
-                            <p className="text-sm">Super photo ! J'adore le cadrage.</p>
+                          <div className="flex-1 relative">
+                            <input
+                              type="text"
+                              className="w-full border border-gray-200 rounded-full py-2 px-4 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              placeholder="Ajouter un commentaire..."
+                              value={newComment[post.id] || ''}
+                              onChange={(e) => setNewComment(prev => ({
+                                ...prev,
+                                [post.id]: e.target.value
+                              }))}
+                              onKeyPress={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleAddComment(post.id);
+                                }
+                              }}
+                            />
+                            <button
+                              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-blue-500 hover:text-blue-600 transition-colors"
+                              onClick={() => handleAddComment(post.id)}
+                            >
+                              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path>
+                              </svg>
+                            </button>
                           </div>
                         </div>
-                        <div className="flex items-start space-x-2">
-                          <div className="w-8 h-8 rounded-full overflow-hidden">
-                            <img src="https://via.placeholder.com/40?text=User2" alt="Commentateur" className="w-full h-full object-cover" />
-                          </div>
-                          <div className="flex-1 bg-white rounded-lg p-2 shadow-sm">
-                            <div className="font-medium text-xs">Utilisateur 2</div>
-                            <p className="text-sm">Très beau contenu, continue comme ça !</p>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center space-x-2">
-                        <div className="w-8 h-8 rounded-full overflow-hidden">
-                          <img src="https://via.placeholder.com/40?text=You" alt="Vous" className="w-full h-full object-cover" />
-                        </div>
-                        <div className="flex-1 relative">
-                          <input 
-                            type="text" 
-                            className="w-full border rounded-full py-1 px-3 pr-10 text-sm" 
-                            placeholder="Ajouter un commentaire..." 
-                          />
-                          <button className="absolute right-2 top-1 text-blue-500">
-                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                              <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path>
-                            </svg>
-                          </button>
-                        </div>
-                      </div>
+                      )}
                     </div>
                   )}
                 </div>
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
-              <svg className="w-16 h-16 mx-auto text-gray-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="text-center py-12 text-gray-500">
+              <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
               </svg>
-              <p>Aucune publication à afficher</p>
-              <p className="text-sm mt-1">Les publications apparaîtront ici</p>
+              <p className="text-lg font-medium">Aucune publication</p>
+              <p className="text-sm mt-1">Cet utilisateur n'a pas encore publié de contenu</p>
             </div>
           )}
         </div>
       </div>
+
+      {/* Modal pour les médias */}
+      {mediaModal.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50" onClick={closeMediaModal}>
+          <div className="max-w-4xl max-h-full p-4" onClick={(e) => e.stopPropagation()}>
+            <div className="relative">
+              <button
+                onClick={closeMediaModal}
+                className="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
+              >
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+
+              {mediaModal.type === 'image' ? (
+                <img
+                  src={mediaModal.src}
+                  alt=""
+                  className="max-w-full max-h-full object-contain"
+                />
+              ) : (
+                <video
+                  src={mediaModal.src}
+                  controls
+                  autoPlay
+                  className="max-w-full max-h-full"
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

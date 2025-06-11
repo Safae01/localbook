@@ -88,10 +88,10 @@ const SavedPostService = {
 
     async checkIfSaved(userId, postId) {
         try {
-            const response = await fetch(`${API_BASE_URL}/check.php?user_id=${userId}&post_id=${postId}`);
+            const response = await fetch(`${API_BASE_URL}/check_single.php?user_id=${userId}&post_id=${postId}`);
             const data = await response.json();
-            
-            return response.ok 
+
+            return response.ok
                 ? { success: true, isSaved: data.is_saved }
                 : { success: false, error: data.error };
         } catch (error) {
