@@ -4,6 +4,7 @@ import AnnonceService from '../services/AnnonceService';
 import LikeService from '../services/LikeService';
 import CommentService from '../services/CommentService';
 import SavedPostService from '../services/SavedPostService';
+import StoryService from '../services/StoryService';
 import StoryViewer from './StoryViewer';
 
 export default function Feed() {
@@ -34,6 +35,8 @@ export default function Feed() {
   const [comments, setComments] = useState({});
   const [commentText, setCommentText] = useState({});
   const [savedPosts, setSavedPosts] = useState({}); // Pour suivre l'état des posts sauvegardés
+  const [storyPreview, setStoryPreview] = useState(null); // Nouvel état pour l'aperçu de story
+  const [stories, setStories] = useState([]);
 
   // Données des posts - chargées depuis l'API
   const [posts, setPosts] = useState([]);
@@ -57,6 +60,11 @@ export default function Feed() {
 
     initializeSavedPosts();
   }, [user, posts]);
+
+  // Charger les stories au montage du composant
+  useEffect(() => {
+    loadStories();
+  }, []);
 
   const loadAnnonces = async () => {
     setLoading(true);
@@ -102,6 +110,24 @@ export default function Feed() {
     }
   };
   
+  const loadStories = async () => {
+    try {
+      const result = await StoryService.getStories();
+      if (result.success) {
+        const transformedStories = result.stories.map(story => ({
+          id: story.ID_STORY,
+          author: story.AUTHOR_NAME || "Utilisateur",
+          avatar: story.AUTHOR_AVATAR || "https://via.placeholder.com/40",
+          image: StoryService.getStoryUrl(story.CONTENT),
+          time: story.DATE_STORY
+        }));
+        setStories(transformedStories);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des stories:', error);
+    }
+  };
+
   // Données utilisateur fictives
   const userProfile = {
     name: "John Doe",
@@ -203,7 +229,7 @@ export default function Feed() {
               className="w-5 h-5" 
               fill={savedPosts[post.id] ? "currentColor" : "none"}
               stroke="currentColor" 
-              viewBox="0 0 20 20"
+              viewBox="0 0 20 20" 
           >
               <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z"></path>
           </svg>
@@ -329,40 +355,36 @@ export default function Feed() {
     setShowStoryViewer(true);
   };
 
-  const stories = Array.from({ length: 8 }).map((_, index) => ({
-    id: index + 1,
-    author: `Utilisateur ${index + 1}`,
-    avatar: `https://via.placeholder.com/40?text=U${index + 1}`,
-    image: `https://via.placeholder.com/400x700?text=Story${index + 1}`,
-  }));
-
   // Ajoutez cette fonction pour gérer l'upload de story
-  const handleStoryUpload = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const reader = new FileReader();
-      
-      reader.onload = (event) => {
-        // Créer une nouvelle story avec l'image uploadée
-        const newStory = {
-          id: stories.length + 1,
-          author: userProfile.name || "Vous",
-          avatar: userProfile.avatar || "https://via.placeholder.com/40?text=You",
-          image: event.target.result,
-          time: "À l'instant"
-        };
-        
-        // Ajouter la nouvelle story au début du tableau
-        setStories([newStory, ...stories]);
-        
-        // Ouvrir automatiquement la story viewer pour voir la story ajoutée
-        setCurrentStoryIndex(0);
-        setShowStoryViewer(true);
-      };
-      
-      reader.readAsDataURL(file);
+  const handleStoryUpload = async (e) => {
+    if (!user) {
+        alert('Vous devez être connecté pour ajouter une story');
+        return;
     }
-  };
+
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+        const result = await StoryService.createStory(user.ID_USER, file);
+        if (result.success) {
+            // Ajouter directement la nouvelle story à la liste et actualiser
+            const newStory = {
+                id: result.story.ID_STORY,
+                author: result.story.AUTHOR_NAME || user.NOM,
+                avatar: result.story.AUTHOR_AVATAR || user.IMG_PROFIL,
+                image: StoryService.getStoryUrl(result.story.CONTENT),
+                time: result.story.DATE_STORY
+            };
+            setStories(prevStories => [newStory, ...prevStories]);
+        } else {
+            alert('Erreur lors de l\'ajout de la story: ' + result.error);
+        }
+    } catch (error) {
+        console.error('Erreur lors de l\'upload de la story:', error);
+        alert('Erreur lors de l\'upload de la story');
+    }
+};
 
   const handleLikePost = async (postId) => {
     if (!user) {
@@ -488,40 +510,41 @@ export default function Feed() {
 
   return (
     <main className="flex-1 p-4 overflow-y-auto">
-      {/* Stories */}
-      <div className="flex space-x-2 overflow-x-auto pb-4 mb-4">
-        {/* Option "Ajouter une story" */}
-        <div className="flex-shrink-0 w-32 h-48 rounded-xl bg-gray-100 relative overflow-hidden cursor-pointer hover:bg-gray-200 transition-colors">
-          <input
-            type="file"
-            id="story-upload"
-            className="hidden"
-            accept="image/*"
-            onChange={handleStoryUpload}
-          />
-          <label htmlFor="story-upload" className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer">
-            <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center mb-2">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-              </svg>
-            </div>
-            <span className="text-sm font-medium text-gray-700">Ajouter une story</span>
-          </label>
+      <div className="flex space-x-4 overflow-x-auto pb-4 mb-4">
+        <div className="flex-shrink-0">
+          <div className="w-32 h-48 rounded-xl bg-gray-100 relative overflow-hidden cursor-pointer hover:bg-gray-200 transition-colors">
+            <input
+              type="file"
+              id="story-upload"
+              className="hidden"
+              accept="image/*,video/*"
+              onChange={handleStoryUpload}
+            />
+            <label htmlFor="story-upload" className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer">
+              <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center mb-2">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+              </div>
+              <span className="text-sm font-medium text-gray-700">Ajouter une story</span>
+            </label>
+          </div>
         </div>
         
-        {/* Stories existantes */}
+        {/* Existing stories */}
         {stories.map((story, index) => (
           <div 
             key={index} 
             className="flex-shrink-0 w-32 h-48 rounded-xl bg-gray-300 relative overflow-hidden cursor-pointer"
             onClick={() => openStoryViewer(index)}
-          >
-            <img src={story.image} alt={`Story ${index + 1}`} className="absolute inset-0 w-full h-full object-cover" />
-            <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black to-transparent">
-              <div className="text-white text-xs font-medium truncate">{story.author}</div>
-            </div>
-            <div className="absolute top-2 left-2 w-8 h-8 rounded-full border-2 border-blue-500 overflow-hidden">
-              <img src={story.avatar} alt={`User ${index + 1}`} className="w-full h-full object-cover" />
+          >            <img src={story.image} alt={`Story ${index + 1}`} className="absolute inset-0 w-full h-full object-cover" />
+            <div className="absolute inset-x-0 top-0 p-2 bg-gradient-to-b from-black to-transparent">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 rounded-full border-2 border-blue-500 overflow-hidden">
+                  <img src={story.avatar} alt={`User ${index + 1}`} className="w-full h-full object-cover" />
+                </div>
+                <div className="text-white text-sm font-medium truncate">{story.author}</div>
+              </div>
             </div>
           </div>
         ))}
