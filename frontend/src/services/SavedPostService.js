@@ -102,17 +102,19 @@ const SavedPostService = {
 
     async checkSavedPosts(userId, postIds) {
         try {
-            const response = await fetch(`${API_BASE_URL}/check.php?user_id=${userId}&post_ids=${postIds.join(',')}`);
-            const data = await response.json();
-            
-            return response.ok 
-                ? { success: true, savedPosts: data.saved_posts }
-                : { success: false, error: data.error };
+            const results = {};
+            for (const postId of postIds) {
+                const response = await this.checkIfSaved(userId, postId);
+                if (response.success) {
+                    results[postId] = response.isSaved;
+                }
+            }
+            return { success: true, savedPosts: results };
         } catch (error) {
             console.error('Check saved posts error:', error);
-            return { success: false, error: 'Erreur de connexion au serveur' };
+            return { success: false, error: 'Erreur lors de la vérification des posts sauvegardés' };
         }
-    }
-};
+    },
+}
 
 export default SavedPostService;

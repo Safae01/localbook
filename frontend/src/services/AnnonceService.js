@@ -84,6 +84,21 @@ const AnnonceService = {
         return this.getAnnonces(userId, limit, offset);
     },
 
+    async getRecommendedPosts(userId = null) {
+        try {
+            const url = new URL('http://localhost/localbook/backend/api/annonces/get_recommended.php');
+            if (userId) {
+                url.searchParams.append('user_id', userId);
+            }
+            const response = await fetch(url);
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Error:', error);
+            throw error;
+        }
+    },
+
     // Helper function to get image URL
     getImageUrl(imageName) {
         if (!imageName) return 'https://via.placeholder.com/600x400?text=Pas+d\'image';

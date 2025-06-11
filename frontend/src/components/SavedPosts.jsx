@@ -15,28 +15,33 @@ export default function SavedPosts() {
   const [savedPostsMap, setSavedPostsMap] = useState({});
 
   useEffect(() => {
-    if (user) {
-      const loadSavedPosts = async () => {
-        setLoading(true);
-        try {
-          const result = await SavedPostService.getSavedPosts(user.ID_USER);
-          if (result.success) {
-            setSavedPosts(result.posts);
-            // Créer la map des posts sauvegardés
-            const newSavedMap = {};
-            result.posts.forEach(post => {
-              newSavedMap[post.id] = true;  // Utiliser post.id au lieu de post.ID_POST
-            });
-            setSavedPostsMap(newSavedMap);
-          }
-        } catch (error) {
-          console.error('Error loading saved posts:', error);
-        } finally {
-          setLoading(false);
+    const loadSavedPosts = async () => {
+      if (!user) return;
+      
+      setLoading(true);
+      try {
+        const result = await SavedPostService.getSavedPosts(user.ID_USER);
+        if (result.success) {
+          setSavedPosts(result.posts);
+          
+          // Initialiser les états likedPosts et savedPostsMap
+          const likedMap = {};
+          const savedMap = {};
+          result.posts.forEach(post => {
+            likedMap[post.id] = post.isLiked;
+            savedMap[post.id] = true;
+          });
+          setLikedPosts(likedMap);
+          setSavedPostsMap(savedMap);
         }
-      };
-      loadSavedPosts();
-    }
+      } catch (error) {
+        console.error('Error loading saved posts:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSavedPosts();
   }, [user]);
 
   const handleRemoveSavedPost = async (id) => {

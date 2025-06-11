@@ -1383,7 +1383,7 @@ export default function ProfilePage() {
                                   <div key={comment.ID_COMMENT} className="flex items-start space-x-2">
                                     <div className="w-8 h-8 rounded-full overflow-hidden">
                                       <img 
-                                        src={comment.AUTHOR_AVATAR || "https://via.placeholder.com/40?text=User"} 
+                                        src={comment.IMG_PROFIL || "https://via.placeholder.com/40?text=User"} 
                                         alt={comment.AUTHOR_NAME} 
                                         className="w-full h-full object-cover" 
                                       />

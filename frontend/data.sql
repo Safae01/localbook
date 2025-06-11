@@ -179,7 +179,7 @@ ENGINE = InnoDB;
 /* Index : EMETTRE_FK                                           */
 /*==============================================================*/
 create index EMETTRE_FK on STORY
-(
+( )p
    ID_USER
 );
 
