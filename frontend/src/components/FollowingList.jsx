@@ -1,46 +1,67 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import UserProfile from './UserProfile';
+import FollowService from '../services/FollowService';
+import { useAuth } from '../context/AuthContext';
 
 export default function FollowingList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
-  
-  const following = [
-    { 
-      id: 1, 
-      name: 'Antoine Dupont', 
-      avatar: 'https://via.placeholder.com/40', 
-      status: 'online',
-      username: '@antoine_d',
-      bio: 'Passionné de technologie et de sport',
-      posts: [
-        { id: 1, content: 'Belle journée pour coder !', image: 'https://via.placeholder.com/600x400?text=Post+1', likes: 24, comments: 5, time: 'il y a 2h' },
-        { id: 2, content: 'Nouveau projet en cours #coding #webdev', image: 'https://via.placeholder.com/600x400?text=Post+2', likes: 18, comments: 3, time: 'il y a 2j' }
-      ]
-    },
-    { 
-      id: 2, 
-      name: 'Marie Laurent', 
-      avatar: 'https://via.placeholder.com/40', 
-      status: 'offline',
-      username: '@marie_l',
-      bio: 'Designer UX/UI | Amoureuse de la nature',
-      posts: [
-        { id: 1, content: 'Mon dernier design pour une application mobile', image: 'https://via.placeholder.com/600x400?text=Design', likes: 45, comments: 12, time: 'il y a 1j' },
-        { id: 2, content: 'Randonnée du weekend #nature', image: 'https://via.placeholder.com/600x400?text=Nature', likes: 32, comments: 8, time: 'il y a 5j' }
-      ]
-    },
-    // Autres utilisateurs avec leurs données...
-    { id: 3, name: 'Paul Mercier', avatar: 'https://via.placeholder.com/40', status: 'online', username: '@paul_m', bio: 'Développeur web', posts: [] },
-    { id: 4, name: 'Claire Rousseau', avatar: 'https://via.placeholder.com/40', status: 'offline', username: '@claire_r', bio: 'Photographe amateur', posts: [] },
-    { id: 5, name: 'Julien Leroy', avatar: 'https://via.placeholder.com/40', status: 'online', username: '@julien_l', bio: 'Entrepreneur', posts: [] },
-    { id: 6, name: 'Émilie Girard', avatar: 'https://via.placeholder.com/40', status: 'online', username: '@emilie_g', bio: 'Marketing digital', posts: [] },
-    { id: 7, name: 'Thomas Morel', avatar: 'https://via.placeholder.com/40', status: 'offline', username: '@thomas_m', bio: 'Étudiant en informatique', posts: [] },
-    { id: 8, name: 'Camille Fournier', avatar: 'https://via.placeholder.com/40', status: 'online', username: '@camille_f', bio: 'Voyageuse | Blogueuse', posts: [] },
-  ];
+  const [following, setFollowing] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
+  const [unfollowingIds, setUnfollowingIds] = useState(new Set());
+  const { user } = useAuth();
+
+  useEffect(() => {
+    const fetchFollowing = async () => {
+      try {
+        // Vérifiez que user.ID_USER est bien défini
+        if (!user || !user.ID_USER) {
+          setError('Utilisateur non identifié');
+          setLoading(false);
+          return;
+        }
+
+        console.log('Fetching following for user ID:', user.ID_USER);
+        const response = await FollowService.getFollowing(user.ID_USER);
+        console.log('API response:', response);
+        
+        if (response.success) {
+          setFollowing(response.following);
+        } else {
+          setError(response.error || 'Erreur lors du chargement');
+        }
+      } catch (err) {
+        console.error('Error fetching following:', err);
+        setError('Échec du chargement de la liste');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user && user.ID_USER) {
+      fetchFollowing();
+    } else {
+      setLoading(false); // Arrêter le chargement si pas d'utilisateur
+    }
+  }, [user]);
+
+  if (loading) {
+    return (
+      <div className="flex-1 p-4 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
+      </div>
+    );
+  }
+
+
+
+  // Use the actual following data from the API
+  const following_data = following;
 
   // Filtrer les personnes suivies en fonction de la recherche
-  const filteredFollowing = following.filter(
+  const filteredFollowing = (following_data || []).filter(
     person => person.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -54,12 +75,70 @@ export default function FollowingList() {
     setSelectedUser(null);
   };
 
+  // Fonction pour ne plus suivre un utilisateur
+  const handleUnfollow = async (followedUser) => {
+    try {
+      console.log('Unfollowing user:', followedUser);
+
+      // Réinitialiser les messages
+      setError(null);
+      setSuccessMessage(null);
+
+      // Ajouter l'ID à la liste des utilisateurs en cours de suppression
+      setUnfollowingIds(prev => new Set([...prev, followedUser.id]));
+
+      const response = await FollowService.unfollow(user.ID_USER, followedUser.id);
+
+      if (response.success) {
+        // Supprimer l'utilisateur de la liste locale
+        setFollowing(prevFollowing =>
+          prevFollowing.filter(person => person.id !== followedUser.id)
+        );
+
+        // Afficher un message de succès
+        setSuccessMessage(`Vous ne suivez plus ${followedUser.name}`);
+
+        // Effacer le message de succès après 3 secondes
+        setTimeout(() => setSuccessMessage(null), 3000);
+
+        console.log('Successfully unfollowed user');
+      } else {
+        setError(response.error || 'Erreur lors de la suppression');
+        console.error('Failed to unfollow:', response.error);
+      }
+    } catch (err) {
+      console.error('Error unfollowing user:', err);
+      setError('Échec de la suppression');
+    } finally {
+      // Retirer l'ID de la liste des utilisateurs en cours de suppression
+      setUnfollowingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(followedUser.id);
+        return newSet;
+      });
+    }
+  };
+
   if (selectedUser) {
     return <UserProfile user={selectedUser} onBack={backToList} />;
   }
 
   return (
     <main className="flex-1 p-4 overflow-y-auto">
+      {/* Message de succès */}
+      {successMessage && (
+        <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded-lg">
+          {successMessage}
+        </div>
+      )}
+
+      {/* Message d'erreur */}
+      {error && (
+        <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+          {error}
+        </div>
+      )}
+
       <div className="bg-white rounded-lg shadow">
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
           <h2 className="text-lg font-semibold text-gray-800">Personnes que je suis</h2>
@@ -76,7 +155,7 @@ export default function FollowingList() {
                 <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd"></path>
               </svg>
             </div>
-            <div className="text-xs px-2 py-1 bg-red-50 text-red-600 font-medium rounded-full">{following.length}</div>
+            <div className="text-xs px-2 py-1 bg-red-50 text-red-600 font-medium rounded-full">{(following || []).length}</div>
           </div>
         </div>
         
@@ -102,13 +181,21 @@ export default function FollowingList() {
                   {person.status === 'online' ? 'En ligne' : 'Hors ligne'}
                 </div>
               </div>
-              <button 
-                className="ml-2 bg-red-50 text-red-600 px-3 py-1 rounded-full text-xs font-medium hover:bg-red-100 transition-colors"
+              <button
+                className={`ml-2 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                  unfollowingIds.has(person.id)
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-red-50 text-red-600 hover:bg-red-100'
+                }`}
                 onClick={(e) => {
                   e.stopPropagation(); // Empêche le déclenchement du onClick du parent
+                  if (!unfollowingIds.has(person.id)) {
+                    handleUnfollow(person);
+                  }
                 }}
+                disabled={unfollowingIds.has(person.id)}
               >
-                Ne plus suivre
+                {unfollowingIds.has(person.id) ? 'Suppression...' : 'Ne plus suivre'}
               </button>
             </div>
           ))}
@@ -123,6 +210,8 @@ export default function FollowingList() {
     </main>
   );
 }
+
+
 
 
 

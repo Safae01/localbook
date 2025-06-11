@@ -1,16 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import FollowService from '../services/FollowService';
+import { useAuth } from '../context/AuthContext';
 
 export default function UserProfile({ user, onBack }) {
-  const [isFollowing, setIsFollowing] = useState(true);
+  const [isFollowing, setIsFollowing] = useState(false);
   const [showComments, setShowComments] = useState({});
   const [likedPosts, setLikedPosts] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [followLoading, setFollowLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
+  const { user: currentUser } = useAuth();
+
+  // Vérifier l'état de follow au chargement
+  useEffect(() => {
+    const checkFollowStatus = async () => {
+      if (!currentUser || !user || !currentUser.ID_USER || !user.id) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await FollowService.checkFollowStatus(currentUser.ID_USER, user.id);
+        if (response.success) {
+          setIsFollowing(response.is_following);
+        } else {
+          console.error('Error checking follow status:', response.error);
+        }
+      } catch (error) {
+        console.error('Error checking follow status:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkFollowStatus();
+  }, [currentUser, user]);
 
   // Vérifier si l'utilisateur existe
   if (!user) {
     return (
       <div className="flex-1 p-4 flex items-center justify-center">
         <p>Utilisateur non trouvé</p>
-        <button 
+        <button
           onClick={onBack}
           className="ml-2 px-4 py-2 bg-blue-600 text-white rounded-md"
         >
@@ -20,8 +52,58 @@ export default function UserProfile({ user, onBack }) {
     );
   }
 
-  const toggleFollow = () => {
-    setIsFollowing(!isFollowing);
+  // Afficher un indicateur de chargement pendant la vérification du statut de follow
+  if (loading) {
+    return (
+      <div className="flex-1 p-4 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <span className="ml-2">Chargement du profil...</span>
+      </div>
+    );
+  }
+
+  const toggleFollow = async () => {
+    if (!currentUser || !user) {
+      setError('Utilisateur non connecté');
+      return;
+    }
+
+    setFollowLoading(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      let response;
+      if (isFollowing) {
+        // Unfollow
+        response = await FollowService.unfollow(currentUser.ID_USER, user.id);
+        if (response.success) {
+          setIsFollowing(false);
+          setSuccessMessage(`Vous ne suivez plus ${user.name}`);
+        } else {
+          setError(response.error || 'Erreur lors de la suppression du suivi');
+        }
+      } else {
+        // Follow
+        response = await FollowService.follow(currentUser.ID_USER, user.id);
+        if (response.success) {
+          setIsFollowing(true);
+          setSuccessMessage(`Vous suivez maintenant ${user.name}`);
+        } else {
+          setError(response.error || 'Erreur lors du suivi');
+        }
+      }
+
+      // Effacer le message de succès après 3 secondes
+      if (response.success) {
+        setTimeout(() => setSuccessMessage(null), 3000);
+      }
+    } catch (error) {
+      console.error('Error toggling follow:', error);
+      setError('Erreur de connexion');
+    } finally {
+      setFollowLoading(false);
+    }
   };
 
   const toggleComments = (postId) => {
@@ -82,6 +164,20 @@ export default function UserProfile({ user, onBack }) {
 
   return (
     <main className="flex-1 p-4 overflow-y-auto">
+      {/* Message de succès */}
+      {successMessage && (
+        <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded-lg">
+          {successMessage}
+        </div>
+      )}
+
+      {/* Message d'erreur */}
+      {error && (
+        <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+          {error}
+        </div>
+      )}
+
       <div className="bg-white rounded-lg shadow">
         {/* En-tête avec bouton retour */}
         <div className="flex items-center px-4 py-3 border-b border-gray-100">
@@ -117,15 +213,21 @@ export default function UserProfile({ user, onBack }) {
                 <button className="px-4 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
                   Message
                 </button>
-                <button 
+                <button
                   className={`px-4 py-1 rounded-md transition-colors ${
-                    isFollowing 
-                      ? 'bg-red-50 text-red-600 hover:bg-red-100' 
-                      : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                    followLoading
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : isFollowing
+                        ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                        : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
                   }`}
                   onClick={toggleFollow}
+                  disabled={followLoading || loading}
                 >
-                  {isFollowing ? 'Ne plus suivre' : 'Suivre'}
+                  {followLoading
+                    ? (isFollowing ? 'Suppression...' : 'Ajout...')
+                    : (isFollowing ? 'Ne plus suivre' : 'Suivre')
+                  }
                 </button>
               </div>
               
