@@ -13,6 +13,7 @@ import ProfilePage from './components/ProfilePage';
 
 export default function App() {
   const [currentView, setCurrentView] = useState('feed');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleShowProfile = () => {
     setCurrentView('profile');
@@ -46,9 +47,17 @@ export default function App() {
     setCurrentView('feed');
   };
 
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+    // S'assurer qu'on est sur le feed pour voir les résultats de recherche
+    if (currentView !== 'feed') {
+      setCurrentView('feed');
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen">
-      <Header onShowProfile={handleShowProfile} onShowFeed={handleShowFeed} />
+      <Header onShowProfile={handleShowProfile} onShowFeed={handleShowFeed} onSearch={handleSearch} />
       <div className="flex flex-1 bg-gray-100 overflow-hidden">
         {currentView !== 'profile' && (
           <Sidebar 
@@ -70,7 +79,7 @@ export default function App() {
           {currentView === 'videos' && <VideoFeed />}
           {currentView === 'savedPosts' && <SavedPosts />}
           {currentView === 'recommendations' && <Recommendations />}
-          {currentView === 'feed' && <Feed />}
+          {currentView === 'feed' && <Feed searchQuery={searchQuery} />}
         </div>
         
         {currentView !== 'profile' && <Contacts />}

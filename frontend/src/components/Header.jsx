@@ -2,14 +2,34 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
-export default function Header({ onShowProfile, onShowFeed, onShowUserProfile }) {
+export default function Header({ onShowProfile, onShowFeed, onShowUserProfile, onSearch }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showMessages, setShowMessages] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [activeChat, setActiveChat] = useState(null);
-  
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Fonction pour gérer la saisie dans l'input de recherche
+  const handleSearchInput = (e) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+
+    // Recherche en temps réel
+    if (onSearch) {
+      onSearch(value.trim());
+    }
+  };
+
+  // Fonction pour effacer la recherche
+  const clearSearch = () => {
+    setSearchQuery('');
+    if (onSearch) {
+      onSearch('');
+    }
+  };
+
   // Données fictives pour les notifications
   const notifications = [
     { id: 1, user: 'Marie Dupont', avatar: 'https://via.placeholder.com/40', action: 'a aimé votre publication', time: 'il y a 5 min', read: false },
@@ -120,8 +140,30 @@ export default function Header({ onShowProfile, onShowFeed, onShowUserProfile })
         
         <div className="flex-1 max-w-xl mx-4">
           <div className="relative">
-            <input className="w-full px-4 py-2 pl-10 border rounded-full bg-gray-100" placeholder="Rechercher sur Facebook" />
-            <svg className="w-5 h-5 text-gray-500 absolute left-3 top-2.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd"></path></svg>
+            <input
+              className="w-full px-4 py-2 pl-10 pr-10 border rounded-full bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+              placeholder="Rechercher des posts (ex: maison tanger birchifa)..."
+              value={searchQuery}
+              onChange={handleSearchInput}
+            />
+            <svg className="w-5 h-5 text-gray-500 absolute left-3 top-2.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd"></path>
+            </svg>
+
+            {/* Bouton effacer à droite */}
+            {searchQuery && (
+              <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                <button
+                  onClick={clearSearch}
+                  className="p-1 rounded-full hover:bg-gray-200 transition-colors"
+                  title="Effacer la recherche"
+                >
+                  <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"></path>
+                    </svg>
+                  </button>
+                </div>
+            )}
           </div>
         </div>
         

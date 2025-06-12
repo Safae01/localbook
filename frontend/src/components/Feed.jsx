@@ -8,7 +8,7 @@ import StoryService from '../services/StoryService';
 import StoryViewer from './StoryViewer';
 import UserProfile from './UserProfile';
 
-export default function Feed() {
+export default function Feed({ searchQuery }) {
   const { user } = useAuth();
   const [showPostForm, setShowPostForm] = useState(false);
   const [postType, setPostType] = useState('');
@@ -42,6 +42,7 @@ export default function Feed() {
 
   // Données des posts - chargées depuis l'API
   const [posts, setPosts] = useState([]);
+  const [filteredPosts, setFilteredPosts] = useState([]);
 
   // Charger les annonces au montage du composant
   useEffect(() => {
@@ -67,6 +68,86 @@ export default function Feed() {
   useEffect(() => {
     loadStories();
   }, []);
+
+  // Effet pour filtrer les posts selon la recherche
+  useEffect(() => {
+    if (!searchQuery || searchQuery.trim() === '') {
+      setFilteredPosts(posts);
+    } else {
+      // Diviser la requête en mots-clés individuels
+      const keywords = searchQuery.toLowerCase().trim().split(/\s+/).filter(keyword => keyword.length > 0);
+
+      const filtered = posts.filter(post => {
+        // Pour qu'un post soit inclus, il doit correspondre à TOUS les mots-clés
+        return keywords.every(keyword => {
+          // Recherche dans le nom de l'auteur
+          if (post.author && post.author.toLowerCase().includes(keyword)) {
+            return true;
+          }
+
+          // Recherche dans le contenu/description
+          if (post.content && post.content.toLowerCase().includes(keyword)) {
+            return true;
+          }
+
+          // Recherche dans les détails du post
+          if (post.details) {
+            const details = post.details;
+
+            // Type de logement
+            if (details.postType && details.postType.toLowerCase().includes(keyword)) {
+              return true;
+            }
+
+            // Ville
+            if (details.location && details.location.toLowerCase().includes(keyword)) {
+              return true;
+            }
+
+            // Quartier
+            if (details.quartier && details.quartier.toLowerCase().includes(keyword)) {
+              return true;
+            }
+
+            // Prix (recherche numérique)
+            if (details.price && details.price.toString().includes(keyword)) {
+              return true;
+            }
+
+            // Surface
+            if (details.area && details.area.toString().includes(keyword)) {
+              return true;
+            }
+
+            // Nombre de pièces
+            if (details.rooms && details.rooms.toString().includes(keyword)) {
+              return true;
+            }
+
+            // État du meuble
+            if (details.furnishingStatus && details.furnishingStatus.toLowerCase().includes(keyword)) {
+              return true;
+            }
+
+            // Équipements
+            if (details.amenities && Array.isArray(details.amenities)) {
+              const amenitiesMatch = details.amenities.some(amenity =>
+                amenity && amenity.toLowerCase().includes(keyword)
+              );
+              if (amenitiesMatch) {
+                return true;
+              }
+            }
+          }
+
+          // Si aucun champ ne correspond à ce mot-clé, retourner false
+          return false;
+        });
+      });
+
+      setFilteredPosts(filtered);
+    }
+  }, [posts, searchQuery]);
 
   // Fonction pour afficher le profil d'un utilisateur
   const showUserProfile = (userId, userName, userAvatar) => {
@@ -995,13 +1076,22 @@ export default function Feed() {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             <span className="ml-2 text-gray-600">Chargement des annonces...</span>
           </div>
-        ) : posts.length === 0 ? (
+        ) : filteredPosts.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            <p>Aucune annonce disponible pour le moment.</p>
-            <p className="text-sm mt-2">Soyez le premier à publier une annonce !</p>
+            {searchQuery ? (
+              <>
+                <p className="text-lg">Aucun résultat pour "{searchQuery}"</p>
+                <p className="text-sm mt-2">Essayez avec d'autres mots-clés</p>
+              </>
+            ) : (
+              <>
+                <p>Aucune annonce disponible pour le moment.</p>
+                <p className="text-sm mt-2">Soyez le premier à publier une annonce !</p>
+              </>
+            )}
           </div>
         ) : (
-          posts.map(post => (
+          filteredPosts.map(post => (
           <div key={post.id} className="bg-white rounded-lg shadow overflow-hidden relative">
             <button 
     onClick={() => handleSavePost(post.id)}
