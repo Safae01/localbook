@@ -4,6 +4,7 @@ import AnnonceService from '../services/AnnonceService';
 import LikeService from '../services/LikeService';
 import SavedPostService from '../services/SavedPostService';
 import CommentService from '../services/CommentService';
+import UserProfile from './UserProfile';
 
 export default function Recommendations() {  const { user } = useAuth();
   const [showComments, setShowComments] = useState({});
@@ -14,6 +15,25 @@ export default function Recommendations() {  const { user } = useAuth();
   const [savedPosts, setSavedPosts] = useState({});
   const [comments, setComments] = useState({});
   const [commentText, setCommentText] = useState({});
+  const [selectedUser, setSelectedUser] = useState(null);
+
+  // Fonction pour afficher le profil d'un utilisateur
+  const showUserProfile = (userId, userName, userAvatar) => {
+    const userObj = {
+      id: userId,
+      name: userName,
+      username: userName,
+      avatar: userAvatar,
+      bio: `Profil de ${userName}`,
+      status: 'offline'
+    };
+    setSelectedUser(userObj);
+  };
+
+  // Fonction pour revenir aux recommandations
+  const backToRecommendations = () => {
+    setSelectedUser(null);
+  };
 
   const fetchRecommendedPosts = async () => {
     try {
@@ -225,6 +245,11 @@ export default function Recommendations() {  const { user } = useAuth();
     return <div className="p-4 text-red-500">{error}</div>;
   }
 
+  // Si un utilisateur est sélectionné, afficher son profil
+  if (selectedUser) {
+    return <UserProfile user={selectedUser} onBack={backToRecommendations} />;
+  }
+
   return (
     <div className="p-6">
       <div className="max-w-3xl mx-auto"> {/* Augmenté de max-w-2xl à max-w-3xl */}
@@ -262,8 +287,11 @@ export default function Recommendations() {  const { user } = useAuth();
                 <div className="p-4">
                   {/* En-tête avec infos utilisateur */}
                   <div className="flex items-center space-x-3 mb-3">
-                    <div className="w-10 h-10 rounded-full bg-gray-300 overflow-hidden">
-                      <img 
+                    <div
+                      className="w-10 h-10 rounded-full bg-gray-300 overflow-hidden cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all"
+                      onClick={() => showUserProfile(post.user_id, post.username, `http://localhost/localbook/backend/api/Uploads/users/${post.profile_photo}`)}
+                    >
+                      <img
                         src={`http://localhost/localbook/backend/api/Uploads/users/${post.profile_photo}`}
                         alt={post.username}
                         className="w-full h-full object-cover"
@@ -271,7 +299,12 @@ export default function Recommendations() {  const { user } = useAuth();
                       />
                     </div>
                     <div>
-                      <div className="font-medium">{post.username}</div>
+                      <div
+                        className="font-medium cursor-pointer hover:text-blue-600 transition-colors"
+                        onClick={() => showUserProfile(post.user_id, post.username, `http://localhost/localbook/backend/api/Uploads/users/${post.profile_photo}`)}
+                      >
+                        {post.username}
+                      </div>
                       <div className="text-xs text-gray-500">{new Date(post.created_at).toLocaleDateString()}</div>
                     </div>
                   </div>
@@ -410,7 +443,12 @@ export default function Recommendations() {  const { user } = useAuth();
                               />
                             </div>
                             <div className="flex-1 bg-white rounded-lg p-2 shadow-sm border border-gray-100">
-                              <div className="font-medium text-xs text-gray-800">{comment.AUTHOR_NAME}</div>
+                              <div
+                                className="font-medium text-xs text-gray-800 cursor-pointer hover:text-blue-600 transition-colors"
+                                onClick={() => showUserProfile(comment.ID_USER, comment.AUTHOR_NAME, comment.AUTHOR_AVATAR ? `http://localhost/localbook/backend/api/Uploads/users/${comment.AUTHOR_AVATAR}` : "https://via.placeholder.com/32")}
+                              >
+                                {comment.AUTHOR_NAME}
+                              </div>
                               <p className="text-sm text-gray-700">{comment.CONTENT}</p>
                               <div className="text-xs text-gray-500 mt-1">{comment.TIME_AGO}</div>
                             </div>

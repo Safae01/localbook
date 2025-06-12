@@ -57,11 +57,23 @@ const SavedPostService = {
             
             const transformedPosts = data.posts.map(post => ({
                 id: post.ID_POST,
+                userId: post.ID_USER,
                 author: post.AUTEUR_NOM,
                 avatar: post.AUTEUR_AVATAR ? `http://localhost/localbook/backend/api/Uploads/users/${post.AUTEUR_AVATAR}` : null,
                 time: post.TIME_AGO,
                 content: post.DESCRIPTION,
-                images: post.POST_IMG ? [`http://localhost/localbook/backend/api/Uploads/posts/${post.POST_IMG}`] : [],
+                images: post.POST_IMG ? (() => {
+                    // Si c'est un JSON (plusieurs images)
+                    try {
+                        const decoded_images = JSON.parse(post.POST_IMG);
+                        if (Array.isArray(decoded_images)) {
+                            return decoded_images.map(img => `http://localhost/localbook/backend/api/Uploads/posts/${img}`);
+                        }
+                    } catch (e) {
+                        // Si ce n'est pas du JSON, c'est une seule image
+                    }
+                    return [`http://localhost/localbook/backend/api/Uploads/posts/${post.POST_IMG}`];
+                })() : [],
                 video: post.POST_VID ? `http://localhost/localbook/backend/api/Uploads/posts/${post.POST_VID}` : null,
                 likes: parseInt(post.LIKES_COUNT) || 0,
                 comments: parseInt(post.COMMENTS_COUNT) || 0,

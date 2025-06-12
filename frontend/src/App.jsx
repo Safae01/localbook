@@ -5,8 +5,7 @@ import Feed from './components/Feed';
 import Contacts from './components/Contacts';
 import FollowersList from './components/FollowersList';
 import FollowingList from './components/FollowingList';
-import GroupsList from './components/GroupsList';
-import VideoReels from './components/VideoReels';
+import VideoFeed from './components/VideoFeed';
 import SavedPosts from './components/SavedPosts';
 import Recommendations from './components/Recommendations';
 import ProfilePage from './components/ProfilePage';
@@ -68,13 +67,13 @@ export default function App() {
           {currentView === 'followers' && <FollowersList />}
           {currentView === 'following' && <FollowingList />}
           {currentView === 'groups' && <GroupsList />}
-          {currentView === 'videos' && <VideoReels />}
+          {currentView === 'videos' && <VideoFeed />}
           {currentView === 'savedPosts' && <SavedPosts />}
           {currentView === 'recommendations' && <Recommendations />}
           {currentView === 'feed' && <Feed />}
         </div>
         
-        {currentView !== 'profile' && currentView !== 'videos' && <Contacts />}
+        {currentView !== 'profile' && <Contacts />}
       </div>
     </div>
   );

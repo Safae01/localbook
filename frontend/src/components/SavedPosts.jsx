@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import SavedPostService from '../services/SavedPostService';
 import LikeService from '../services/LikeService';
 import CommentService from '../services/CommentService';
+import UserProfile from './UserProfile';
 
 export default function SavedPosts() {
   const { user } = useAuth();
@@ -13,6 +14,25 @@ export default function SavedPosts() {
   const [commentText, setCommentText] = useState({});
   const [comments, setComments] = useState({});
   const [savedPostsMap, setSavedPostsMap] = useState({});
+  const [selectedUser, setSelectedUser] = useState(null);
+
+  // Fonction pour afficher le profil d'un utilisateur
+  const showUserProfile = (userId, userName, userAvatar) => {
+    const userObj = {
+      id: userId,
+      name: userName,
+      username: userName,
+      avatar: userAvatar,
+      bio: `Profil de ${userName}`,
+      status: 'offline'
+    };
+    setSelectedUser(userObj);
+  };
+
+  // Fonction pour revenir aux posts sauvegardés
+  const backToSavedPosts = () => {
+    setSelectedUser(null);
+  };
 
   useEffect(() => {
     const loadSavedPosts = async () => {
@@ -183,6 +203,11 @@ export default function SavedPosts() {
     }
   };
 
+  // Si un utilisateur est sélectionné, afficher son profil
+  if (selectedUser) {
+    return <UserProfile user={selectedUser} onBack={backToSavedPosts} />;
+  }
+
   return (
     <main className="flex-1 p-4 overflow-y-auto">
       <div className="max-w-4xl mx-auto">
@@ -211,15 +236,23 @@ export default function SavedPosts() {
                 <div className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 rounded-full bg-gray-300 overflow-hidden">
-                        <img 
-                          src={post.avatar} 
-                          alt={post.author} 
-                          className="w-full h-full object-cover" 
+                      <div
+                        className="w-10 h-10 rounded-full bg-gray-300 overflow-hidden cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all"
+                        onClick={() => showUserProfile(post.userId, post.author, post.avatar)}
+                      >
+                        <img
+                          src={post.avatar}
+                          alt={post.author}
+                          className="w-full h-full object-cover"
                         />
                       </div>
                       <div>
-                        <div className="font-medium">{post.author}</div>
+                        <div
+                          className="font-medium cursor-pointer hover:text-blue-600 transition-colors"
+                          onClick={() => showUserProfile(post.userId, post.author, post.avatar)}
+                        >
+                          {post.author}
+                        </div>
                         <div className="text-xs text-gray-500">{post.time}</div>
                       </div>
                     </div>
@@ -362,7 +395,12 @@ export default function SavedPosts() {
                               />
                             </div>
                             <div className="flex-1 bg-white rounded-lg p-2 shadow-sm border border-gray-100">
-                              <div className="font-medium text-xs text-gray-800">{comment.AUTHOR_NAME}</div>
+                              <div
+                                className="font-medium text-xs text-gray-800 cursor-pointer hover:text-blue-600 transition-colors"
+                                onClick={() => showUserProfile(comment.ID_USER, comment.AUTHOR_NAME, comment.AUTHOR_AVATAR)}
+                              >
+                                {comment.AUTHOR_NAME}
+                              </div>
                               <p className="text-sm text-gray-700">{comment.CONTENT}</p>
                               <div className="text-xs text-gray-500 mt-1">{comment.TIME_AGO}</div>
                             </div>

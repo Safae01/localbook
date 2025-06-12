@@ -10,17 +10,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     exit;
 }
 
-$user_id = isset($_GET['user_id']) ? $_GET['user_id'] : null;
 $current_user_id = isset($_GET['current_user_id']) ? $_GET['current_user_id'] : null;
-
-if (!$user_id) {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'User ID is required']);
-    exit;
-}
+$limit = isset($_GET['limit']) ? intval($_GET['limit']) : 20;
+$offset = isset($_GET['offset']) ? intval($_GET['offset']) : 0;
 
 try {
-    // Récupérer les posts de l'utilisateur avec les informations de l'auteur
+    // Récupérer seulement les posts qui ont des vidéos
     $query = "
         SELECT 
             p.ID_POST,
@@ -55,12 +50,14 @@ try {
             END as TIME_AGO
         FROM poste p
         INNER JOIN user u ON p.ID_USER = u.ID_USER
-        WHERE p.ID_USER = :user_id
+        WHERE p.POST_VID IS NOT NULL AND p.POST_VID != ''
         ORDER BY p.DATE_POST DESC
+        LIMIT :limit OFFSET :offset
     ";
 
     $stmt = $db->prepare($query);
-    $stmt->bindParam(':user_id', $user_id);
+    $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
+    $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
     if ($current_user_id) {
         $stmt->bindParam(':current_user_id', $current_user_id);
     }
@@ -68,20 +65,8 @@ try {
 
     $posts = [];
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        // Construire les URLs des médias
-        $images = [];
-        if ($row['POST_IMG']) {
-            // Si c'est un JSON (plusieurs images)
-            $decoded_images = json_decode($row['POST_IMG'], true);
-            if (is_array($decoded_images)) {
-                foreach ($decoded_images as $img) {
-                    $images[] = "http://localhost/localbook/backend/api/Uploads/posts/" . $img;
-                }
-            } else {
-                // Si c'est une seule image
-                $images[] = "http://localhost/localbook/backend/api/Uploads/posts/" . $row['POST_IMG'];
-            }
-        }
+        // Pour les posts vidéos, on ne retourne QUE la vidéo (pas les images)
+        $images = []; // Pas d'images dans la vue vidéos
 
         $video = null;
         if ($row['POST_VID']) {
@@ -94,33 +79,9 @@ try {
             $description_parts[] = $row['DESCRIPTION'];
         }
 
-        // Ajouter les détails de l'annonce
-        $details = [];
-        if ($row['TYPE_LOC'])
-            $details[] = "Type: " . $row['TYPE_LOC'];
-        if ($row['VILLE'])
-            $details[] = "Ville: " . $row['VILLE'];
-        if ($row['QUARTIER'])
-            $details[] = "Quartier: " . $row['QUARTIER'];
-        if ($row['PRIX'])
-            $details[] = "Prix: " . number_format($row['PRIX']) . " €";
-        if ($row['SURFACE'])
-            $details[] = "Surface: " . $row['SURFACE'] . " m²";
-        if ($row['NBRE_PIECE'])
-            $details[] = "Pièces: " . $row['NBRE_PIECE'];
-        if ($row['ETAT'])
-            $details[] = "État: " . $row['ETAT'];
-        if ($row['EQUIPEMENT'])
-            $details[] = "Équipement: " . $row['EQUIPEMENT'];
-        if ($row['DUREE'])
-            $details[] = "Durée: " . $row['DUREE'];
-
-        if (!empty($details)) {
-            $description_parts[] = "\n" . implode(" • ", $details);
-        }
-
         $posts[] = [
             'id' => $row['ID_POST'],
+            'userId' => $row['ID_USER'],
             'author' => $row['AUTEUR_NOM'],
             'avatar' => $row['AUTEUR_AVATAR'] ? "http://localhost/localbook/backend/api/Uploads/users/" . $row['AUTEUR_AVATAR'] : "https://via.placeholder.com/40",
             'time' => $row['TIME_AGO'],
@@ -144,10 +105,17 @@ try {
         ];
     }
 
+    // Compter le total de posts avec vidéos
+    $countQuery = "SELECT COUNT(*) as total FROM poste WHERE POST_VID IS NOT NULL AND POST_VID != ''";
+    $countStmt = $db->prepare($countQuery);
+    $countStmt->execute();
+    $totalResult = $countStmt->fetch(PDO::FETCH_ASSOC);
+
     echo json_encode([
         'success' => true,
         'posts' => $posts,
-        'total' => count($posts)
+        'total' => (int) $totalResult['total'],
+        'has_more' => ($offset + $limit) < (int) $totalResult['total']
     ]);
 
 } catch (PDOException $e) {

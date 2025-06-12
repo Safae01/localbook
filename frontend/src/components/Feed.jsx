@@ -6,6 +6,7 @@ import CommentService from '../services/CommentService';
 import SavedPostService from '../services/SavedPostService';
 import StoryService from '../services/StoryService';
 import StoryViewer from './StoryViewer';
+import UserProfile from './UserProfile';
 
 export default function Feed() {
   const { user } = useAuth();
@@ -37,6 +38,7 @@ export default function Feed() {
   const [savedPosts, setSavedPosts] = useState({}); // Pour suivre l'état des posts sauvegardés
   const [storyPreview, setStoryPreview] = useState(null); // Nouvel état pour l'aperçu de story
   const [stories, setStories] = useState([]);
+  const [selectedUser, setSelectedUser] = useState(null);
 
   // Données des posts - chargées depuis l'API
   const [posts, setPosts] = useState([]);
@@ -66,6 +68,24 @@ export default function Feed() {
     loadStories();
   }, []);
 
+  // Fonction pour afficher le profil d'un utilisateur
+  const showUserProfile = (userId, userName, userAvatar) => {
+    const userObj = {
+      id: userId,
+      name: userName,
+      username: userName,
+      avatar: userAvatar,
+      bio: `Profil de ${userName}`,
+      status: 'offline'
+    };
+    setSelectedUser(userObj);
+  };
+
+  // Fonction pour revenir au feed
+  const backToFeed = () => {
+    setSelectedUser(null);
+  };
+
   const loadAnnonces = async () => {
     setLoading(true);
     try {
@@ -74,6 +94,7 @@ export default function Feed() {
         // Transformer les annonces en format posts pour l'affichage
         const transformedPosts = result.annonces.map(annonce => ({
           id: annonce.ID_ANNONCE || annonce.ID_POST,
+          userId: annonce.ID_USER,
           author: annonce.AUTEUR_NOM,
           avatar: annonce.AUTEUR_AVATAR || "https://via.placeholder.com/40",
           time: annonce.TIME_AGO,
@@ -507,6 +528,11 @@ export default function Feed() {
       alert('Erreur lors de l\'ajout du commentaire');
     }
   };
+
+  // Si un utilisateur est sélectionné, afficher son profil
+  if (selectedUser) {
+    return <UserProfile user={selectedUser} onBack={backToFeed} />;
+  }
 
   return (
     <main className="flex-1 p-4 overflow-y-auto">
@@ -997,11 +1023,19 @@ export default function Feed() {
             
             <div className="p-4">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-full bg-gray-300 overflow-hidden">
+                <div
+                  className="w-10 h-10 rounded-full bg-gray-300 overflow-hidden cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all"
+                  onClick={() => showUserProfile(post.userId, post.author, post.avatar)}
+                >
                   <img src={post.avatar} alt={post.author} className="w-full h-full object-cover" />
                 </div>
                 <div>
-                  <div className="font-medium">{post.author}</div>
+                  <div
+                    className="font-medium cursor-pointer hover:text-blue-600 transition-colors"
+                    onClick={() => showUserProfile(post.userId, post.author, post.avatar)}
+                  >
+                    {post.author}
+                  </div>
                   <div className="text-xs text-gray-500">{post.time}</div>
                 </div>
               </div>
