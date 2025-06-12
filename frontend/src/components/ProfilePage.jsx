@@ -5,6 +5,7 @@ import CommentService from '../services/CommentService';
 import LikeService from '../services/LikeService';
 import EditProfileService from '../services/EditProfileService';
 import FollowService from '../services/FollowService';
+import UserProfile from './UserProfile';
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -44,6 +45,9 @@ export default function ProfilePage() {
 
   // États pour la section suivis (following)
   const [unfollowingInProgress, setUnfollowingInProgress] = useState(new Set());
+
+  // État pour l'affichage du profil utilisateur
+  const [selectedUser, setSelectedUser] = useState(null);
 
   // États pour le modal des médias
   const [showMediaModal, setShowMediaModal] = useState(false);
@@ -311,6 +315,15 @@ export default function ProfilePage() {
         return newSet;
       });
     }
+  };
+
+  // Fonctions pour gérer l'affichage du profil utilisateur
+  const showUserProfile = (user) => {
+    setSelectedUser(user);
+  };
+
+  const backToProfilePage = () => {
+    setSelectedUser(null);
   };
 
   // Mettre à jour le profil quand les données utilisateur changent
@@ -706,6 +719,11 @@ export default function ProfilePage() {
     setShowDeleteModal(false);
     setPostToDelete(null);
   };
+
+  // Si un utilisateur est sélectionné, afficher son profil
+  if (selectedUser) {
+    return <UserProfile user={selectedUser} onBack={backToProfilePage} />;
+  }
 
   return (
     <main className="flex-1 overflow-y-auto bg-gray-100 relative">
@@ -1705,7 +1723,8 @@ export default function ProfilePage() {
                   filteredFollowers.map(follower => (
                     <div
                       key={follower.id}
-                      className="flex items-center p-2 rounded-md hover:bg-gray-50 transition-colors"
+                      className="flex items-center p-2 rounded-md hover:bg-gray-50 transition-colors cursor-pointer"
+                      onClick={() => showUserProfile(follower)}
                     >
                       <div className="relative mr-3">
                         <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-blue-100">
@@ -1734,7 +1753,10 @@ export default function ProfilePage() {
                               ? 'bg-red-50 text-red-600 hover:bg-red-100'
                               : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
                         }`}
-                        onClick={() => handleFollowerToggle(follower)}
+                        onClick={(e) => {
+                          e.stopPropagation(); // Empêche le déclenchement du onClick du parent
+                          handleFollowerToggle(follower);
+                        }}
                         disabled={followingInProgress.has(follower.id)}
                       >
                         {followingInProgress.has(follower.id)
@@ -1779,7 +1801,8 @@ export default function ProfilePage() {
                   filteredFollowing.map(person => (
                     <div
                       key={person.id}
-                      className="flex items-center p-2 rounded-md hover:bg-gray-50 transition-colors"
+                      className="flex items-center p-2 rounded-md hover:bg-gray-50 transition-colors cursor-pointer"
+                      onClick={() => showUserProfile(person)}
                     >
                       <div className="relative mr-3">
                         <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-red-100">
@@ -1806,7 +1829,10 @@ export default function ProfilePage() {
                             ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                             : 'bg-red-50 text-red-600 hover:bg-red-100'
                         }`}
-                        onClick={() => handleUnfollowFromFollowing(person)}
+                        onClick={(e) => {
+                          e.stopPropagation(); // Empêche le déclenchement du onClick du parent
+                          handleUnfollowFromFollowing(person);
+                        }}
                         disabled={unfollowingInProgress.has(person.id)}
                       >
                         {unfollowingInProgress.has(person.id) ? 'Suppression...' : 'Ne plus suivre'}
