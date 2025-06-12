@@ -35,27 +35,26 @@ export default function ProfilePage() {
   const [showMediaModal, setShowMediaModal] = useState(false);
   const [currentMedia, setCurrentMedia] = useState({ type: null, src: null });
   
-  // Données du profil utilisateur - utilise les vraies données de l'utilisateur connecté
+  // Données du profil utilisateur - utilise uniquement les vraies données de l'utilisateur connecté
   const [userProfile, setUserProfile] = useState({
-    name: user ? user.NOM : "Votre Nom",
-    username: user ? `@${user.NOM.toLowerCase().replace(/\s+/g, '')}` : "@votrenom",
+    name: user ? user.NOM : "",
+    username: user ? `@${user.NOM.toLowerCase().replace(/\s+/g, '')}` : "",
     coverPhoto: "https://via.placeholder.com/1200x300",
     avatar: "https://via.placeholder.com/150",
-    bio: "Membre de Localbook | Passionné d'immobilier",
-    location: "France",
+    bio: "",
     joinDate: "Membre depuis 2024",
     stats: {
       posts: 0,
       followers: 0,
       following: 0
     },
-    status: "Membre",
-    city: "France",
-    age: 25,
-    email: user ? user.EMAIL : "votre.email@exemple.com",
-    phone: "+33 6 12 34 56 78",
-    website: "www.localbook.com",
-    birthday: "1999-01-01",
+    status: "",
+    city: "",
+    age: "",
+    email: user ? user.EMAIL : "",
+    phone: "",
+    website: "",
+    birthday: "",
     followers: [
       { id: 1, name: 'Sophie Lefebvre', avatar: 'https://via.placeholder.com/40', status: 'online' },
       { id: 2, name: 'Lucas Bernard', avatar: 'https://via.placeholder.com/40', status: 'offline' },
@@ -136,22 +135,22 @@ export default function ProfilePage() {
   // Ajouter cette fonction pour charger les données complètes du profil
   const loadUserProfile = async () => {
     if (!user) return;
-    
+
     try {
       const result = await EditProfileService.getUserProfile(user.ID_USER);
       if (result.success) {
         setUserProfile(prev => ({
           ...prev,
-          name: result.user.NOM || prev.name,
-          username: `@${result.user.NOM?.toLowerCase().replace(/\s+/g, '')}` || prev.username,
-          bio: result.user.BIO || prev.bio,
-          location: result.user.LOCALISATION || prev.location,
-          status: result.user.STATUT || prev.status,
-          city: result.user.VILLE || prev.city,
-          age: result.user.AGE || prev.age,
-          email: result.user.EMAIL || prev.email,
-          phone: result.user.TELE || prev.phone,
-          birthday: result.user.DATE_NAISSANCE || prev.birthday,          avatar: result.user.IMG_PROFIL ? EditProfileService.getProfileImageUrl(result.user.IMG_PROFIL) : prev.avatar,
+          name: result.user.NOM || "",
+          username: result.user.NOM ? `@${result.user.NOM.toLowerCase().replace(/\s+/g, '')}` : "",
+          bio: result.user.BIO || "",
+          status: result.user.STATUT || "",
+          city: result.user.VILLE || "",
+          age: result.user.AGE || "",
+          email: result.user.EMAIL || "",
+          phone: result.user.TELE || "",
+          birthday: result.user.DATE_NAISSANCE || "",
+          avatar: result.user.IMG_PROFIL ? EditProfileService.getProfileImageUrl(result.user.IMG_PROFIL) : prev.avatar,
           coverPhoto: result.user.IMG_COUVERT ? EditProfileService.getCoverImageUrl(result.user.IMG_COUVERT) : prev.coverPhoto
         }));
       }
@@ -165,11 +164,18 @@ export default function ProfilePage() {
     if (user) {
       // Charger les données complètes du profil
       loadUserProfile();
-      
+
       // Charger les annonces de l'utilisateur
       loadUserAnnonces();
     }
   }, [user]);
+
+  // Mettre à jour editedProfile quand userProfile change
+  useEffect(() => {
+    setEditedProfile({...userProfile});
+    setAvatarPreview(userProfile.avatar);
+    setCoverPhotoPreview(userProfile.coverPhoto);
+  }, [userProfile]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -223,7 +229,6 @@ export default function ProfilePage() {
           name: editedProfile.name,
           username: editedProfile.username,
           bio: editedProfile.bio,
-          location: editedProfile.location,
           status: editedProfile.status,
           city: editedProfile.city,
           age: editedProfile.age,
@@ -262,6 +267,14 @@ export default function ProfilePage() {
     }
   };
   
+  // Ouvrir le formulaire d'édition avec les données actuelles
+  const handleOpenEditForm = () => {
+    setEditedProfile({...userProfile});
+    setAvatarPreview(userProfile.avatar);
+    setCoverPhotoPreview(userProfile.coverPhoto);
+    setShowEditProfileForm(true);
+  };
+
   // Annuler les modifications et fermer le formulaire
   const handleCancelEdit = () => {
     setEditedProfile({...userProfile});
@@ -614,12 +627,13 @@ export default function ProfilePage() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Localisation</label>
-                  <input 
-                    type="text" 
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Ville</label>
+                  <input
+                    type="text"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    value={editedProfile.location}
-                    onChange={(e) => setEditedProfile({...editedProfile, location: e.target.value})}
+                    value={editedProfile.city}
+                    onChange={(e) => setEditedProfile({...editedProfile, city: e.target.value})}
+                    placeholder="Ex: Paris, Tanger"
                   />
                 </div>
               </div>
@@ -631,18 +645,15 @@ export default function ProfilePage() {
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Statut</label>
-                    <select 
+                    <select
                       className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       value={editedProfile.status}
                       onChange={(e) => setEditedProfile({...editedProfile, status: e.target.value})}
                     >
-                      <option value="Développeur Web">Développeur Web</option>
-                      <option value="Étudiant">Étudiant</option>
-                      <option value="Propriétaire">Propriétaire</option>
-                      <option value="Agent immobilier">Agent immobilier</option>
-                      <option value="Architecte">Architecte</option>
-                      <option value="Designer">Designer</option>
-                      <option value="Autre">Autre</option>
+                      <option value="">Sélectionnez votre statut</option>
+                      <option value="proprietaire">Propriétaire</option>
+                      <option value="locataire">Locataire</option>
+                      <option value="intermadiaire">Intermédiaire</option>
                     </select>
                   </div>
                   
@@ -658,11 +669,11 @@ export default function ProfilePage() {
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Âge</label>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      value={editedProfile.age}
-                      onChange={(e) => setEditedProfile({...editedProfile, age: parseInt(e.target.value, 10)})}
+                      value={editedProfile.age || ""}
+                      onChange={(e) => setEditedProfile({...editedProfile, age: e.target.value ? parseInt(e.target.value, 10) : ""})}
                       min="18"
                       max="120"
                     />
@@ -1116,22 +1127,28 @@ export default function ProfilePage() {
               <h1 className="text-2xl font-bold">{userProfile.name}</h1>
               <p className="text-gray-500">{userProfile.username}</p>
             </div>
-            <button 
+            <button
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-              onClick={() => setShowEditProfileForm(true)}
+              onClick={handleOpenEditForm}
             >
               Modifier le profil
             </button>
           </div>
           
-          <p className="mt-4 text-gray-700">{userProfile.bio}</p>
-          
+          {userProfile.bio && (
+            <p className="mt-4 text-gray-700">{userProfile.bio}</p>
+          )}
+
           <div className="flex items-center mt-2 text-gray-600">
-            <svg className="w-5 h-5 mr-1" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"></path>
-            </svg>
-            <span>{userProfile.location}</span>
-            <span className="mx-2">•</span>
+            {userProfile.city && (
+              <>
+                <svg className="w-5 h-5 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"></path>
+                </svg>
+                <span>{userProfile.city}</span>
+                <span className="mx-2">•</span>
+              </>
+            )}
             <span>{userProfile.joinDate}</span>
           </div>
           
@@ -1532,7 +1549,143 @@ export default function ProfilePage() {
               </div>
             </div>
           )}
-          
+
+          {activeTab === 'apropos' && (
+            <div className="bg-white rounded-lg shadow">
+              <div className="p-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">À propos</h3>
+
+                <div className="space-y-4">
+                  {/* Informations personnelles */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Ville */}
+                    <div className="flex items-center space-x-3">
+                      <svg className="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"></path>
+                      </svg>
+                      <div className="flex-1">
+                        {userProfile.city ? (
+                          <span className="text-gray-700">{userProfile.city}</span>
+                        ) : (
+                          <button
+                            className="text-blue-600 hover:text-blue-700 text-sm flex items-center"
+                            onClick={handleOpenEditForm}
+                          >
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            </svg>
+                            Ajouter votre ville
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Statut */}
+                    <div className="flex items-center space-x-3">
+                      <svg className="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"></path>
+                      </svg>
+                      <div className="flex-1">
+                        {userProfile.status ? (
+                          <span className="text-gray-700">{userProfile.status}</span>
+                        ) : (
+                          <button
+                            className="text-blue-600 hover:text-blue-700 text-sm flex items-center"
+                            onClick={handleOpenEditForm}
+                          >
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            </svg>
+                            Ajouter votre statut
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Âge */}
+                    <div className="flex items-center space-x-3">
+                      <svg className="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd"></path>
+                      </svg>
+                      <div className="flex-1">
+                        {userProfile.age ? (
+                          <span className="text-gray-700">{userProfile.age} ans</span>
+                        ) : (
+                          <button
+                            className="text-blue-600 hover:text-blue-700 text-sm flex items-center"
+                            onClick={handleOpenEditForm}
+                          >
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            </svg>
+                            Ajouter votre âge
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Téléphone */}
+                    <div className="flex items-center space-x-3">
+                      <svg className="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path>
+                      </svg>
+                      <div className="flex-1">
+                        {userProfile.phone ? (
+                          <span className="text-gray-700">{userProfile.phone}</span>
+                        ) : (
+                          <button
+                            className="text-blue-600 hover:text-blue-700 text-sm flex items-center"
+                            onClick={handleOpenEditForm}
+                          >
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            </svg>
+                            Ajouter votre téléphone
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Email */}
+                  <div className="flex items-center space-x-3 pt-4 border-t">
+                    <svg className="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"></path>
+                      <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"></path>
+                    </svg>
+                    <div className="flex-1">
+                      {userProfile.email ? (
+                        <span className="text-gray-700">{userProfile.email}</span>
+                      ) : (
+                        <button
+                          className="text-blue-600 hover:text-blue-700 text-sm flex items-center"
+                          onClick={handleOpenEditForm}
+                        >
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                          </svg>
+                          Ajouter votre email
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Date de naissance */}
+                  {userProfile.birthday && (
+                    <div className="flex items-center space-x-3 pt-4 border-t">
+                      <svg className="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd"></path>
+                      </svg>
+                      <div className="flex-1">
+                        <span className="text-gray-700">Né(e) le {new Date(userProfile.birthday).toLocaleDateString('fr-FR')}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
 

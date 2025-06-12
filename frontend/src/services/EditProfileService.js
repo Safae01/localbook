@@ -9,9 +9,8 @@ const EditProfileService = {
       formData.append('NOM', profileData.name);
       formData.append('USERNAME', profileData.username);
       formData.append('BIO', profileData.bio);
-      formData.append('LOCALISATION', profileData.location);
+      formData.append('VILLE', profileData.city); // Utiliser city pour le champ VILLE
       formData.append('STATUT', profileData.status);
-      formData.append('VILLE', profileData.city);
       formData.append('AGE', profileData.age);
       formData.append('DATE_NAISSANCE', profileData.birthday);
       formData.append('EMAIL', profileData.email);

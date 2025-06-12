@@ -62,10 +62,11 @@ try {
         'EMAIL' => 'EMAIL',
         'BIO' => 'BIO',
         'STATUT' => 'STATUT',
+        'VILLE' => 'VILLE',
         'AGE' => 'AGE',
         'DATE_NAISSANCE' => 'DATE_NAISSANCE',
         'TELE' => 'TELE',
-        
+
     ];
 
     foreach ($fieldMap as $postKey => $dbField) {
