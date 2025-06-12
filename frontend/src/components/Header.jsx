@@ -6,6 +6,9 @@ import ChangePasswordModal from './ChangePasswordModal';
 export default function Header({ onShowProfile, onShowFeed, onShowUserProfile, onSearch }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  // Générer l'URL de l'image de profil
+  const profileImageUrl = user?.IMG_PROFIL ? `http://localhost/localbook/backend/api/Uploads/users/${user.IMG_PROFIL}` : "https://via.placeholder.com/40";
   const [showNotifications, setShowNotifications] = useState(false);
   const [showMessages, setShowMessages] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -309,7 +312,12 @@ export default function Header({ onShowProfile, onShowFeed, onShowUserProfile, o
               onClick={toggleUserMenu}
             >
               <div className="w-8 h-8 rounded-full bg-gray-300 overflow-hidden">
-                <img src="https://via.placeholder.com/40" alt="Profile" className="w-full h-full object-cover" />
+                <img
+                  src={profileImageUrl}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                  onError={(e) => e.target.src = "https://via.placeholder.com/40"}
+                />
               </div>
               <span className="font-medium text-gray-700">{user ? user.NOM : 'Utilisateur'}</span>
               <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
@@ -323,7 +331,12 @@ export default function Header({ onShowProfile, onShowFeed, onShowUserProfile, o
                 <div className="p-3 border-b">
                   <div className="flex items-center space-x-3">
                     <div className="w-12 h-12 rounded-full bg-gray-300 overflow-hidden">
-                      <img src="https://via.placeholder.com/48" alt="Profile" className="w-full h-full object-cover" />
+                      <img
+                        src={user?.IMG_PROFIL ? `http://localhost/localbook/backend/api/Uploads/users/${user.IMG_PROFIL}` : "https://via.placeholder.com/48"}
+                        alt="Profile"
+                        className="w-full h-full object-cover"
+                        onError={(e) => e.target.src = "https://via.placeholder.com/48"}
+                      />
                     </div>
                     <div>
                       <p className="font-semibold text-gray-800">{user ? user.NOM : 'Utilisateur'}</p>

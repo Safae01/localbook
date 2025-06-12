@@ -10,6 +10,9 @@ import UserProfile from './UserProfile';
 
 export default function Feed({ searchQuery }) {
   const { user } = useAuth();
+
+  // Générer l'URL de l'image de profil
+  const profileImageUrl = user?.IMG_PROFIL ? `http://localhost/localbook/backend/api/Uploads/users/${user.IMG_PROFIL}` : "https://via.placeholder.com/40";
   const [showPostForm, setShowPostForm] = useState(false);
   const [postType, setPostType] = useState('');
   const [location, setLocation] = useState('');
@@ -177,7 +180,7 @@ export default function Feed({ searchQuery }) {
           id: annonce.ID_ANNONCE || annonce.ID_POST,
           userId: annonce.ID_USER,
           author: annonce.AUTEUR_NOM,
-          avatar: annonce.AUTEUR_AVATAR || "https://via.placeholder.com/40",
+          avatar: annonce.AUTEUR_AVATAR ? `http://localhost/localbook/backend/api/Uploads/users/${annonce.AUTEUR_AVATAR}` : "https://via.placeholder.com/40",
           time: annonce.TIME_AGO,
           content: annonce.DESCRIPTION || annonce.CONTENT_SUMMARY,
           // Support des images multiples
@@ -203,6 +206,18 @@ export default function Feed({ searchQuery }) {
             amenities: annonce.EQUIPEMENTS ? (Array.isArray(annonce.EQUIPEMENTS) ? annonce.EQUIPEMENTS : annonce.EQUIPEMENTS.split(',')) : []
           }
         }));
+
+        // Debug: Afficher les posts transformés
+        console.log('📝 Posts transformés:', transformedPosts);
+        transformedPosts.forEach((post, index) => {
+          console.log(`Post ${index + 1}:`, {
+            id: post.id,
+            author: post.author,
+            images: post.images,
+            video: post.video
+          });
+        });
+
         setPosts(transformedPosts);
       }
     } catch (error) {
@@ -219,7 +234,7 @@ export default function Feed({ searchQuery }) {
         const transformedStories = result.stories.map(story => ({
           id: story.ID_STORY,
           author: story.AUTHOR_NAME || "Utilisateur",
-          avatar: story.AUTHOR_AVATAR || "https://via.placeholder.com/40",
+          avatar: story.AUTHOR_AVATAR ? `http://localhost/localbook/backend/api/Uploads/users/${story.AUTHOR_AVATAR}` : "https://via.placeholder.com/40",
           image: StoryService.getStoryUrl(story.CONTENT),
           time: story.DATE_STORY
         }));
@@ -230,10 +245,10 @@ export default function Feed({ searchQuery }) {
     }
   };
 
-  // Données utilisateur fictives
+  // Données utilisateur réelles
   const userProfile = {
-    name: "John Doe",
-    avatar: "https://via.placeholder.com/40"
+    name: user ? user.NOM : "Utilisateur",
+    avatar: profileImageUrl
   };
 
   const handleImageUpload = (e) => {
@@ -474,7 +489,7 @@ export default function Feed({ searchQuery }) {
             const newStory = {
                 id: result.story.ID_STORY,
                 author: result.story.AUTHOR_NAME || user.NOM,
-                avatar: result.story.AUTHOR_AVATAR || user.IMG_PROFIL,
+                avatar: result.story.AUTHOR_AVATAR ? `http://localhost/localbook/backend/api/Uploads/users/${result.story.AUTHOR_AVATAR}` : profileImageUrl,
                 image: StoryService.getStoryUrl(result.story.CONTENT),
                 time: result.story.DATE_STORY
             };
@@ -648,7 +663,12 @@ export default function Feed({ searchQuery }) {
             <div className="absolute inset-x-0 top-0 p-2 bg-gradient-to-b from-black to-transparent">
               <div className="flex items-center space-x-2">
                 <div className="w-8 h-8 rounded-full border-2 border-blue-500 overflow-hidden">
-                  <img src={story.avatar} alt={`User ${index + 1}`} className="w-full h-full object-cover" />
+                  <img
+                    src={story.avatar}
+                    alt={`User ${index + 1}`}
+                    className="w-full h-full object-cover"
+                    onError={(e) => e.target.src = "https://via.placeholder.com/40"}
+                  />
                 </div>
                 <div className="text-white text-sm font-medium truncate">{story.author}</div>
               </div>
@@ -661,7 +681,12 @@ export default function Feed({ searchQuery }) {
       <div className="bg-white p-4 rounded-lg shadow mb-4">
         <div className="flex items-center space-x-2 mb-3">
           <div className="w-10 h-10 rounded-full bg-gray-300 overflow-hidden">
-            <img src="https://via.placeholder.com/40" alt="Profile" className="w-full h-full object-cover" />
+            <img
+              src={profileImageUrl}
+              alt="Profile"
+              className="w-full h-full object-cover"
+              onError={(e) => e.target.src = "https://via.placeholder.com/40"}
+            />
           </div>
           <input 
             className="flex-1 bg-gray-100 rounded-full px-4 py-2 text-sm" 
@@ -1117,7 +1142,12 @@ export default function Feed({ searchQuery }) {
                   className="w-10 h-10 rounded-full bg-gray-300 overflow-hidden cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all"
                   onClick={() => showUserProfile(post.userId, post.author, post.avatar)}
                 >
-                  <img src={post.avatar} alt={post.author} className="w-full h-full object-cover" />
+                  <img
+                    src={post.avatar}
+                    alt={post.author}
+                    className="w-full h-full object-cover"
+                    onError={(e) => e.target.src = "https://via.placeholder.com/40"}
+                  />
                 </div>
                 <div>
                   <div
@@ -1201,7 +1231,11 @@ export default function Feed({ searchQuery }) {
                         alt={`Post image ${index + 1}`}
                         className="w-full h-full object-cover bg-gray-100"
                         onError={(e) => {
+                          console.log('❌ Erreur de chargement image:', image);
                           e.target.style.display = 'none';
+                        }}
+                        onLoad={() => {
+                          console.log('✅ Image chargée avec succès:', image);
                         }}
                       />
                     </div>
@@ -1216,6 +1250,12 @@ export default function Feed({ searchQuery }) {
                         src={post.video}
                         className="w-full h-full object-cover bg-black"
                         controls
+                        onError={(e) => {
+                          console.log('❌ Erreur de chargement vidéo:', post.video);
+                        }}
+                        onLoadedData={() => {
+                          console.log('✅ Vidéo chargée avec succès:', post.video);
+                        }}
                       />
                     </div>
                   )}
@@ -1269,10 +1309,11 @@ export default function Feed({ searchQuery }) {
                     .map(comment => (
                       <div key={comment.ID_COMMENT} className="flex items-start space-x-2 mb-2"> {/* Ajout d'un mb-2 pour l'espacement vertical */}
                         <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
-                          <img 
-                            src={comment.AUTHOR_AVATAR || "https://via.placeholder.com/40?text=User"} 
-                            alt={comment.AUTHOR_NAME} 
-                            className="w-full h-full object-cover" 
+                          <img
+                            src={comment.AUTHOR_AVATAR ? `http://localhost/localbook/backend/api/Uploads/users/${comment.AUTHOR_AVATAR}` : "https://via.placeholder.com/40"}
+                            alt={comment.AUTHOR_NAME}
+                            className="w-full h-full object-cover"
+                            onError={(e) => e.target.src = "https://via.placeholder.com/40"}
                           />
                         </div>
                         <div className="flex-1 bg-white rounded-lg p-2 shadow-sm border border-gray-100">
@@ -1289,10 +1330,11 @@ export default function Feed({ searchQuery }) {
                 {/* Formulaire d'ajout de commentaire */}
                 <div className="flex items-center space-x-2">
                   <div className="w-8 h-8 rounded-full overflow-hidden">
-                    <img 
-                      src={user?.IMG_PROFIL || "https://via.placeholder.com/40?text=You"} 
-                      alt="Vous" 
-                      className="w-full h-full object-cover" 
+                    <img
+                      src={profileImageUrl}
+                      alt="Vous"
+                      className="w-full h-full object-cover"
+                      onError={(e) => e.target.src = "https://via.placeholder.com/40"}
                     />
                   </div>
                   <div className="flex-1 relative">
