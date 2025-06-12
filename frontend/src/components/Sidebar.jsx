@@ -3,6 +3,8 @@ import { useAuth } from '../context/AuthContext';
 
 export default function Sidebar({ onShowProfile, onShowFollowers, onShowFollowing, onShowGroups, onShowVideos, onShowSavedPosts, onShowRecommendations }) {
   const { user } = useAuth();
+  const profileImageUrl = user?.IMG_PROFIL ? `http://localhost/localbook/backend/api/Uploads/users/${user.IMG_PROFIL}` : "https://via.placeholder.com/40";
+
   return (
     <div className="w-1/5 p-4 bg-white shadow hidden md:block overflow-y-auto h-screen sticky top-16">
       <div className="space-y-4">
@@ -11,7 +13,7 @@ export default function Sidebar({ onShowProfile, onShowFollowers, onShowFollowin
           onClick={onShowProfile}
         >
           <div className="w-10 h-10 rounded-full bg-gray-300 overflow-hidden">
-            <img src="https://via.placeholder.com/40" alt="Profile" className="w-full h-full object-cover" />
+            <img src={profileImageUrl} alt="Profile" className="w-full h-full object-cover" />
           </div>
           <span className="font-medium">{user ? user.NOM : 'Votre Nom'}</span>
         </div>
