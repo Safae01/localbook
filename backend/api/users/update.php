@@ -40,6 +40,7 @@ try {
     // Traiter les fichiers uploadés
     $imgProfil = null;
     $imgCouvert = null;
+    $cinImg = null;
 
     if (isset($_FILES['IMG_PROFIL']) && $_FILES['IMG_PROFIL']['error'] === UPLOAD_ERR_OK) {
         $imgProfil = uniqid() . '_' . basename($_FILES['IMG_PROFIL']['name']);
@@ -49,6 +50,15 @@ try {
     if (isset($_FILES['IMG_COUVERT']) && $_FILES['IMG_COUVERT']['error'] === UPLOAD_ERR_OK) {
         $imgCouvert = uniqid() . '_' . basename($_FILES['IMG_COUVERT']['name']);
         move_uploaded_file($_FILES['IMG_COUVERT']['tmp_name'], $uploadDir . $imgCouvert);
+    }
+
+    if (isset($_FILES['CIN_IMG']) && $_FILES['CIN_IMG']['error'] === UPLOAD_ERR_OK) {
+        $cinImg = uniqid() . '_' . basename($_FILES['CIN_IMG']['name']);
+        $cinUploadDir = __DIR__ . '/../Uploads/';
+        if (!file_exists($cinUploadDir)) {
+            mkdir($cinUploadDir, 0777, true);
+        }
+        move_uploaded_file($_FILES['CIN_IMG']['tmp_name'], $cinUploadDir . $cinImg);
     }
 
     // Préparer la requête SQL
@@ -85,6 +95,11 @@ try {
     if ($imgCouvert) {
         $updateFields[] = "IMG_COUVERT = :IMG_COUVERT";
         $params[':IMG_COUVERT'] = $imgCouvert;
+    }
+
+    if ($cinImg) {
+        $updateFields[] = "CIN_IMG = :CIN_IMG";
+        $params[':CIN_IMG'] = $cinImg;
     }
 
     if (empty($updateFields)) {

@@ -63,6 +63,8 @@ export default function ProfilePage() {
     username: user ? `@${user.NOM.toLowerCase().replace(/\s+/g, '')}` : "",
     coverPhoto: user && user.IMG_COUVERT ? EditProfileService.getCoverImageUrl(user.IMG_COUVERT) : "https://via.placeholder.com/1200x300",
     avatar: user && user.IMG_PROFIL ? EditProfileService.getProfileImageUrl(user.IMG_PROFIL) : "https://via.placeholder.com/150",
+    cinImage: user && user.CIN_IMG ? EditProfileService.getCinImageUrl(user.CIN_IMG) : null,
+    cinNumber: user ? user.CIN_NUM : "",
     bio: "",
     joinDate: "Membre depuis 2024",
     stats: {
@@ -85,10 +87,12 @@ export default function ProfilePage() {
   // État pour stocker les fichiers d'image temporaires
   const [avatarFile, setAvatarFile] = useState(null);
   const [coverPhotoFile, setCoverPhotoFile] = useState(null);
-  
+  const [cinFile, setCinFile] = useState(null);
+
   // Prévisualisations des images
   const [avatarPreview, setAvatarPreview] = useState(userProfile.avatar);
   const [coverPhotoPreview, setCoverPhotoPreview] = useState(userProfile.coverPhoto);
+  const [cinPreview, setCinPreview] = useState(userProfile.cinImage);
 
   // Filtrer les abonnés en fonction de la recherche
   const filteredFollowers = realFollowers.filter(
@@ -156,8 +160,10 @@ export default function ProfilePage() {
           email: result.user.EMAIL || "",
           phone: result.user.TELE || "",
           birthday: result.user.DATE_NAISSANCE || "",
+          cinNumber: result.user.CIN_NUM || "",
           avatar: result.user.IMG_PROFIL ? EditProfileService.getProfileImageUrl(result.user.IMG_PROFIL) : prev.avatar,
-          coverPhoto: result.user.IMG_COUVERT ? EditProfileService.getCoverImageUrl(result.user.IMG_COUVERT) : prev.coverPhoto
+          coverPhoto: result.user.IMG_COUVERT ? EditProfileService.getCoverImageUrl(result.user.IMG_COUVERT) : prev.coverPhoto,
+          cinImage: result.user.CIN_IMG ? EditProfileService.getCinImageUrl(result.user.CIN_IMG) : null
         }));
       }
     } catch (error) {
@@ -388,6 +394,19 @@ export default function ProfilePage() {
       reader.readAsDataURL(file);
     }
   };
+
+  // Gérer le changement d'image CIN
+  const handleCinImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setCinFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCinPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
   
   // Gérer la soumission du formulaire de modification du profil
   const handleProfileSubmit = async (e) => {
@@ -408,7 +427,8 @@ export default function ProfilePage() {
           phone: editedProfile.phone
         },
         avatarFile,
-        coverPhotoFile
+        coverPhotoFile,
+        cinFile
       );
 
       if (result.success) {
@@ -426,6 +446,7 @@ export default function ProfilePage() {
         // Réinitialiser les fichiers
         setAvatarFile(null);
         setCoverPhotoFile(null);
+        setCinFile(null);
         
         // Recharger les données du profil pour s'assurer d'avoir les dernières informations
         loadUserProfile();
@@ -443,6 +464,7 @@ export default function ProfilePage() {
     setEditedProfile({...userProfile});
     setAvatarPreview(userProfile.avatar);
     setCoverPhotoPreview(userProfile.coverPhoto);
+    setCinPreview(userProfile.cinImage);
     setShowEditProfileForm(true);
   };
 
@@ -451,9 +473,11 @@ export default function ProfilePage() {
     setEditedProfile({...userProfile});
     setAvatarPreview(userProfile.avatar);
     setCoverPhotoPreview(userProfile.coverPhoto);
+    setCinPreview(userProfile.cinImage);
     setShowEditProfileForm(false);
     setAvatarFile(null);
     setCoverPhotoFile(null);
+    setCinFile(null);
   };
   
   const handleAmenityToggle = (amenity) => {
@@ -825,7 +849,56 @@ export default function ProfilePage() {
                   </div>
                 </div>
               </div>
-              
+
+              {/* Image CIN */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Image de la carte d'identité</label>
+                <div className="flex items-center space-x-4">
+                  <div className="relative w-32 h-20 rounded-lg overflow-hidden bg-gray-200 border-2 border-dashed border-gray-300">
+                    {cinPreview ? (
+                      <>
+                        <img
+                          src={cinPreview}
+                          alt="CIN"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                          <label className="bg-white text-gray-800 p-1 rounded cursor-pointer hover:bg-gray-100 transition-colors">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={handleCinImageChange}
+                            />
+                          </label>
+                        </div>
+                      </>
+                    ) : (
+                      <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors">
+                        <svg className="w-8 h-8 text-gray-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span className="text-xs text-gray-500 text-center">Ajouter CIN</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleCinImageChange}
+                        />
+                      </label>
+                    )}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    Cliquez pour ajouter ou changer l'image de votre carte d'identité
+                  </div>
+                </div>
+              </div>
+
               {/* Informations de base */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-gray-800">Informations de base</h3>
@@ -2034,6 +2107,47 @@ export default function ProfilePage() {
                           Ajouter votre email
                         </button>
                       )}
+                    </div>
+                  </div>
+
+                  {/* CIN */}
+                  <div className="flex items-center space-x-3 pt-4 border-t">
+                    <svg className="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2h12v8H4V6z" clipRule="evenodd"></path>
+                      <path d="M6 8h2v2H6V8zm4 0h4v1h-4V8zm0 2h4v1h-4v-1z"></path>
+                    </svg>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="text-gray-700 font-medium">Carte d'identité</span>
+                          {userProfile.cinNumber && (
+                            <div className="text-sm text-gray-500">N° {userProfile.cinNumber}</div>
+                          )}
+                        </div>
+                        {userProfile.cinImage ? (
+                          <button
+                            className="text-blue-600 hover:text-blue-700 text-sm flex items-center"
+                            onClick={() => openMediaModal('image', userProfile.cinImage)}
+                            title="Cliquer pour voir l'image CIN"
+                          >
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            Voir l'image
+                          </button>
+                        ) : (
+                          <button
+                            className="text-blue-600 hover:text-blue-700 text-sm flex items-center"
+                            onClick={handleOpenEditForm}
+                          >
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            </svg>
+                            Ajouter l'image CIN
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
 

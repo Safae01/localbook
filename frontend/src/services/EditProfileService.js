@@ -1,7 +1,7 @@
 const API_BASE_URL = 'http://localhost/localbook/backend/api';
 
 const EditProfileService = {
-  updateProfile: async (userId, profileData, avatarFile, coverPhotoFile) => {
+  updateProfile: async (userId, profileData, avatarFile, coverPhotoFile, cinFile) => {
     try {
       const formData = new FormData();
       
@@ -22,6 +22,10 @@ const EditProfileService = {
       }
       if (coverPhotoFile) {
         formData.append('IMG_COUVERT', coverPhotoFile);
+      }
+
+      if (cinFile) {
+        formData.append('CIN_IMG', cinFile);
       }
 
       const response = await fetch(`${API_BASE_URL}/users/update.php?userId=${userId}`, {
@@ -73,6 +77,12 @@ const EditProfileService = {
   getCoverImageUrl(imageName) {
     if (!imageName) return 'https://via.placeholder.com/1200x300';
     return `${API_BASE_URL}/Uploads/users/${imageName}`;
+  },
+
+  // Helper pour obtenir l'URL de l'image CIN
+  getCinImageUrl(imageName) {
+    if (!imageName) return null;
+    return `${API_BASE_URL}/Uploads/${imageName}`;
   },
 };
 
