@@ -28,7 +28,22 @@ export default function Auth() {
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+
+      // Vérifier le type de fichier
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+      if (!allowedTypes.includes(file.type)) {
+        setValidationErrors(prev => ({ ...prev, cinFile: 'Seuls les fichiers image (JPG, PNG, GIF) sont autorisés' }));
+        return;
+      }
+
+      // Vérifier la taille du fichier (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        setValidationErrors(prev => ({ ...prev, cinFile: 'Le fichier ne doit pas dépasser 10MB' }));
+        return;
+      }
+
       setCinFile(file);
+      console.log('Fichier CIN sélectionné:', file.name, file.size, file.type);
 
       // Créer une prévisualisation de l'image
       const reader = new FileReader();
@@ -52,13 +67,28 @@ export default function Auth() {
     if (!isLogin) {
       const errors = {};
 
+      // Validation des champs obligatoires
+      if (!form.NOM.trim()) {
+        errors.NOM = 'Le nom complet est requis';
+      }
+
+      if (!form.CIN_NUM.trim()) {
+        errors.CIN_NUM = 'Le numéro de CIN est requis';
+      }
+
+      if (!form.EMAIL.trim()) {
+        errors.EMAIL = 'L\'email est requis';
+      }
+
       // Validation du mot de passe (minimum 7 caractères)
-      if (form.MDPS.length < 7) {
+      if (!form.MDPS || form.MDPS.length < 7) {
         errors.MDPS = 'Le mot de passe doit contenir au moins 7 caractères';
       }
 
       // Validation de la confirmation du mot de passe
-      if (form.MDPS !== form.confirmPassword) {
+      if (!form.confirmPassword) {
+        errors.confirmPassword = 'La confirmation du mot de passe est requise';
+      } else if (form.MDPS !== form.confirmPassword) {
         errors.confirmPassword = 'Les mots de passe ne correspondent pas';
       }
 
@@ -70,6 +100,8 @@ export default function Auth() {
       // Si il y a des erreurs, les afficher et arrêter
       if (Object.keys(errors).length > 0) {
         setValidationErrors(errors);
+        console.log('Erreurs de validation:', errors);
+        console.log('Fichier CIN:', cinFile);
         return;
       }
     }
@@ -78,9 +110,23 @@ export default function Auth() {
       ? { EMAIL: form.EMAIL, MDPS: form.MDPS }
       : { NOM: form.NOM, CIN_NUM: form.CIN_NUM, EMAIL: form.EMAIL, MDPS: form.MDPS };
 
+    console.log('Données à envoyer:', body);
+    console.log('Fichier CIN à envoyer:', cinFile);
+
     const result = isLogin ? await login(body) : await register(body, cinFile);
     if (result.success) {
-      setTimeout(() => navigate(isLogin ? '/home' : '/login'), 1500);
+      if (isLogin) {
+        setTimeout(() => navigate('/home'), 1500);
+      } else {
+        // Après inscription réussie, basculer vers le mode login
+        setTimeout(() => {
+          setIsLogin(true);
+          setForm({ NOM: '', CIN_NUM: '', EMAIL: '', MDPS: '', confirmPassword: '' });
+          setCinFile(null);
+          setCinPreview(null);
+          setValidationErrors({});
+        }, 2000);
+      }
     }
   };
 
@@ -280,7 +326,13 @@ export default function Auth() {
                             onClick={() => {
                               setCinPreview(null);
                               setCinFile(null);
-                              document.getElementById('cin-file-upload').value = '';
+                              // Réinitialiser les deux inputs de fichier
+                              const input1 = document.getElementById('cin-file-upload');
+                              const input2 = document.getElementById('cin-file-upload-change');
+                              if (input1) input1.value = '';
+                              if (input2) input2.value = '';
+                              // Effacer l'erreur de validation
+                              setValidationErrors(prev => ({ ...prev, cinFile: '' }));
                             }}
                             className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 focus:outline-none"
                           >
@@ -289,9 +341,9 @@ export default function Auth() {
                             </svg>
                           </button>
                           <div className="mt-2 text-center">
-                            <label htmlFor="cin-file-upload" className="cursor-pointer bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none">
+                            <label htmlFor="cin-file-upload-change" className="cursor-pointer bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none">
                               Changer l'image
-                              <input id="cin-file-upload" name="cin-file-upload" type="file" className="sr-only" accept="image/*" onChange={handleFileChange} required />
+                              <input id="cin-file-upload-change" name="cin-file-upload" type="file" className="sr-only" accept="image/*" onChange={handleFileChange} />
                             </label>
                           </div>
                         </div>

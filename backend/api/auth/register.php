@@ -60,10 +60,36 @@ try {
     exit;
 }
 
+// Debug: Log received files
+error_log("Files received: " . print_r($_FILES, true));
+error_log("POST data received: " . print_r($_POST, true));
+
 // Validate CIN image is required
-if (!isset($_FILES['cin-file-upload']) || $_FILES['cin-file-upload']['error'] !== UPLOAD_ERR_OK) {
+if (!isset($_FILES['cin-file-upload'])) {
     http_response_code(400);
-    echo json_encode(["error" => "L'image de la carte nationale est obligatoire"]);
+    echo json_encode(["error" => "L'image de la carte nationale est obligatoire - fichier non reçu"]);
+    ob_end_flush();
+    exit;
+}
+
+if ($_FILES['cin-file-upload']['error'] !== UPLOAD_ERR_OK) {
+    $error_message = "Erreur lors de l'upload: ";
+    switch ($_FILES['cin-file-upload']['error']) {
+        case UPLOAD_ERR_INI_SIZE:
+        case UPLOAD_ERR_FORM_SIZE:
+            $error_message .= "Le fichier est trop volumineux";
+            break;
+        case UPLOAD_ERR_PARTIAL:
+            $error_message .= "Le fichier n'a été que partiellement téléchargé";
+            break;
+        case UPLOAD_ERR_NO_FILE:
+            $error_message .= "Aucun fichier n'a été téléchargé";
+            break;
+        default:
+            $error_message .= "Erreur inconnue (" . $_FILES['cin-file-upload']['error'] . ")";
+    }
+    http_response_code(400);
+    echo json_encode(["error" => $error_message]);
     ob_end_flush();
     exit;
 }
