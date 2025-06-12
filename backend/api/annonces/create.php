@@ -56,34 +56,61 @@ if (!is_numeric($data['PRIX']) || $data['PRIX'] <= 0) {
     exit;
 }
 
-// Handle image upload (single image for POST_IMG)
+// Handle multiple image uploads
 $post_img = null;
+$uploaded_images = [];
+
 if (isset($_FILES['images']) && is_array($_FILES['images']['name']) && count($_FILES['images']['name']) > 0) {
     $upload_dir = '../Uploads/posts/';
     if (!is_dir($upload_dir)) {
         mkdir($upload_dir, 0777, true);
     }
 
-    $allowed = ['image/png', 'image/jpeg', 'image/gif', 'image/jpg'];
+    $allowed = ['image/png', 'image/jpeg', 'image/gif', 'image/jpg', 'image/webp'];
 
-    // Prendre seulement la première image
-    if ($_FILES['images']['error'][0] === UPLOAD_ERR_OK) {
-        if (
-            !in_array($_FILES['images']['type'][0], $allowed) ||
-            $_FILES['images']['size'][0] > 10 * 1024 * 1024
-        ) {
-            http_response_code(400);
-            echo json_encode(["error" => "Fichier image invalide ou trop grand"]);
-            ob_end_flush();
-            exit;
+    // Traiter toutes les images
+    for ($i = 0; $i < count($_FILES['images']['name']); $i++) {
+        if ($_FILES['images']['error'][$i] === UPLOAD_ERR_OK) {
+            // Debug: Log file info
+            error_log("Image $i - Name: " . $_FILES['images']['name'][$i]);
+            error_log("Image $i - Type: " . $_FILES['images']['type'][$i]);
+            error_log("Image $i - Size: " . $_FILES['images']['size'][$i]);
+
+            // Vérifier le type et la taille de chaque image
+            $file_type = $_FILES['images']['type'][$i];
+            $file_size = $_FILES['images']['size'][$i];
+            $max_size = 15 * 1024 * 1024; // Augmenté à 15MB
+
+            if (!in_array($file_type, $allowed)) {
+                error_log("Type de fichier non autorisé: $file_type");
+                http_response_code(400);
+                echo json_encode(["error" => "Type de fichier non autorisé pour l'image " . ($i + 1) . ": $file_type"]);
+                ob_end_flush();
+                exit;
+            }
+
+            if ($file_size > $max_size) {
+                error_log("Fichier trop grand: $file_size bytes");
+                http_response_code(400);
+                echo json_encode(["error" => "Fichier image " . ($i + 1) . " trop grand (" . round($file_size/1024/1024, 2) . "MB). Maximum autorisé: 15MB"]);
+                ob_end_flush();
+                exit;
+            }
+
+            $file_name = uniqid() . '_' . basename($_FILES['images']['name'][$i]);
+            $file_path = $upload_dir . $file_name;
+
+            if (move_uploaded_file($_FILES['images']['tmp_name'][$i], $file_path)) {
+                $uploaded_images[] = $file_name;
+            }
         }
+    }
 
-        $file_name = uniqid() . '_' . basename($_FILES['images']['name'][0]);
-        $file_path = $upload_dir . $file_name;
-
-        if (move_uploaded_file($_FILES['images']['tmp_name'][0], $file_path)) {
-            $post_img = $file_name;
-        }
+    // Stocker les images en JSON si plusieurs, sinon comme string unique
+    if (count($uploaded_images) > 1) {
+        $post_img = json_encode($uploaded_images);
+    } elseif (count($uploaded_images) === 1) {
+        $post_img = $uploaded_images[0]; // Compatibilité avec l'ancien format
     }
 }
 

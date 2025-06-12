@@ -1603,15 +1603,20 @@ export default function ProfilePage() {
                         </div>
                       </div>
 
-                      {/* Images et vidéos en miniature comme dans le Feed */}
+                      {/* Images et vidéos avec nouveau layout */}
                       <div className="px-3"> {/* Padding horizontal uniquement */}
-                        {((annonce.IMAGES && annonce.IMAGES.length > 0) || annonce.VIDEO) && (
-                          <div className="flex w-full gap-0"> {/* flex-row, médias côte à côte, prennent toute la largeur */}
-                            {/* Images */}
-                            {annonce.IMAGES && annonce.IMAGES.map((image, index) => (
+                        {/* Images en haut */}
+                        {annonce.IMAGES && annonce.IMAGES.length > 0 && (
+                          <div className="flex w-full gap-1 flex-wrap mb-3"> {/* Images avec marge en bas */}
+                            {annonce.IMAGES.map((image, index) => (
                               <div
                                 key={"img-" + index}
-                                className="overflow-hidden shadow-lg hover:scale-105 transition-transform cursor-pointer w-72 h-60"
+                                className={`overflow-hidden shadow-lg hover:scale-105 transition-transform cursor-pointer h-60 ${
+                                  annonce.IMAGES.length === 1 ? 'w-full' :
+                                  annonce.IMAGES.length === 2 ? 'w-[calc(50%-2px)]' :
+                                  annonce.IMAGES.length === 3 ? 'w-[calc(33.333%-3px)]' :
+                                  'w-[calc(25%-3px)]'
+                                }`}
                                 onClick={() => openMediaModal('image', AnnonceService.getImageUrl(image))}
                               >
                                 <img
@@ -1619,24 +1624,37 @@ export default function ProfilePage() {
                                   alt={`Annonce image ${index + 1}`}
                                   className="w-full h-full object-cover bg-gray-100"
                                   onError={(e) => {
-                                    e.target.style.display = 'none';
+                                    console.log('❌ Erreur de chargement image:', image);
+                                    e.target.src = 'https://via.placeholder.com/300x200?text=Image+non+disponible';
+                                  }}
+                                  onLoad={() => {
+                                    console.log('✅ Image chargée avec succès:', image);
                                   }}
                                 />
                               </div>
                             ))}
-                            {/* Vidéo */}
-                            {annonce.VIDEO && (
-                              <div
-                                className="overflow-hidden shadow-lg hover:scale-105 transition-transform cursor-pointer w-72 h-60"
-                                onClick={() => openMediaModal('video', AnnonceService.getVideoUrl(annonce.VIDEO))}
-                              >
-                                <video
-                                  src={AnnonceService.getVideoUrl(annonce.VIDEO)}
-                                  className="w-full h-full object-cover bg-black"
-                                  controls
-                                />
-                              </div>
-                            )}
+                          </div>
+                        )}
+
+                        {/* Vidéo en pleine largeur en dessous */}
+                        {annonce.VIDEO && (
+                          <div className="w-full">
+                            <div
+                              className="overflow-hidden shadow-lg hover:scale-105 transition-transform cursor-pointer w-full h-80"
+                              onClick={() => openMediaModal('video', AnnonceService.getVideoUrl(annonce.VIDEO))}
+                            >
+                              <video
+                                src={AnnonceService.getVideoUrl(annonce.VIDEO)}
+                                className="w-full h-full object-cover bg-black"
+                                controls
+                                onError={() => {
+                                  console.log('❌ Erreur de chargement vidéo:', annonce.VIDEO);
+                                }}
+                                onLoadedData={() => {
+                                  console.log('✅ Vidéo chargée avec succès:', annonce.VIDEO);
+                                }}
+                              />
+                            </div>
                           </div>
                         )}
                       </div>

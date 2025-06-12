@@ -51,10 +51,25 @@ try {    // Build query to get posts ordered by likes count
 
     $posts = [];
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        // Process images (multiple images stored as JSON in POST_IMG)
+        $images = [];
+        if ($row['IMAGE']) {
+            // Essayer de décoder le JSON d'abord
+            $decoded_images = json_decode($row['IMAGE'], true);
+            if (is_array($decoded_images)) {
+                // Si c'est un JSON valide avec un tableau d'images
+                $images = $decoded_images;
+            } else {
+                // Si c'est une seule image (ancien format)
+                $images = [$row['IMAGE']];
+            }
+        }
+
         $posts[] = [
             'id' => $row['ID_POST'],
             'content' => $row['DESCRIPTION'],
-            'image' => $row['IMAGE'],
+            'image' => $row['IMAGE'], // Garde l'ancien format pour compatibilité
+            'images' => $images, // Nouveau format pour images multiples
             'video' => $row['VIDEO'],
             'created_at' => $row['DATE_POST'],
             'user_id' => $row['ID_USER'],

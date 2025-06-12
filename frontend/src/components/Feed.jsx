@@ -189,7 +189,7 @@ export default function Feed({ searchQuery }) {
             : (annonce.POST_IMG ? [AnnonceService.getImageUrl(annonce.POST_IMG)] : []),
           // Garde l'image unique pour compatibilité
           image: annonce.POST_IMG ? AnnonceService.getImageUrl(annonce.POST_IMG) :
-                 (annonce.IMAGES && annonce.IMAGES.length > 0 ? AnnonceService.getImageUrl(annonce.images.map()) : null),
+                 (annonce.IMAGES && annonce.IMAGES.length > 0 ? AnnonceService.getImageUrl(annonce.IMAGES[0]) : null),
           video: annonce.POST_VID ? AnnonceService.getVideoUrl(annonce.POST_VID) :
                  (annonce.VIDEO ? AnnonceService.getVideoUrl(annonce.VIDEO) : null),
           likes: annonce.LIKES_COUNT || 0,
@@ -259,6 +259,31 @@ export default function Feed({ searchQuery }) {
       setErrors(prev => ({ ...prev, images: null }));
     }
 
+    // Validation des fichiers
+    const maxSize = 15 * 1024 * 1024; // 15MB
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+
+      console.log(`Fichier ${i + 1}:`, {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        sizeInMB: (file.size / 1024 / 1024).toFixed(2)
+      });
+
+      if (!allowedTypes.includes(file.type)) {
+        setErrors(prev => ({ ...prev, images: `Le fichier "${file.name}" n'est pas un type d'image valide. Types autorisés: JPG, PNG, GIF, WebP` }));
+        return;
+      }
+
+      if (file.size > maxSize) {
+        setErrors(prev => ({ ...prev, images: `Le fichier "${file.name}" est trop grand (${(file.size / 1024 / 1024).toFixed(2)}MB). Taille maximum: 15MB` }));
+        return;
+      }
+    }
+
     // Sauvegarder les vrais fichiers pour l'upload
     setImageFiles([...imageFiles, ...files]);
 
@@ -315,49 +340,13 @@ export default function Feed({ searchQuery }) {
     setErrors({});
 
     if (!user) {
-
-      const handleSavePost = async (postId) => {
-          if (!user) return;
-          
-          try {
-              const result = await SavedPostService.savePost(user.ID_USER, postId);
-              
-              if (result.success) {
-                  setSavedPosts(prev => ({
-                      ...prev,
-                      [postId]: !prev[postId]
-                  }));
-              } else {
-                  console.error('Save error:', result.error);
-              }
-          } catch (error) {
-              console.error('Erreur lors de la sauvegarde du post:', error);
-          }
-      };
-      
-      // Et remplacez le bouton de sauvegarde dans le JSX :
-      <button 
-          onClick={() => handleSavePost(post.id)}
-          className={`absolute top-3 right-3 text-gray-500 hover:text-blue-600 bg-white rounded-full p-1 shadow ${
-              savedPosts[post.id] ? 'text-blue-600' : ''
-          }`}
-      >
-          <svg 
-              className="w-5 h-5" 
-              fill={savedPosts[post.id] ? "currentColor" : "none"}
-              stroke="currentColor" 
-              viewBox="0 0 20 20" 
-          >
-              <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z"></path>
-          </svg>
-      </button>
-      ('Vous devez être connecté pour créer une annonce');
+      alert('Vous devez être connecté pour créer une annonce');
       return;
     }
 
     // Validation obligatoire : au moins une image ou une vidéo
     console.log('Validation - imageFiles.length:', imageFiles.length, 'videoFile:', videoFile);
-    if (imageFiles.length === 0 || !videoFile) {
+    if (imageFiles.length === 0 && !videoFile) {
       console.log('❌ VALIDATION ÉCHOUÉE - aucun média');
       const newErrors = {
         images: 'Au moins une image est requise',
@@ -1019,7 +1008,7 @@ export default function Feed({ searchQuery }) {
                         </label>
                         <p className="pl-1">ou glisser-déposer</p>
                       </div>
-                      <p className="text-xs text-gray-500">PNG, JPG, GIF jusqu'à 10MB</p>
+                      <p className="text-xs text-gray-500">PNG, JPG, GIF, WebP jusqu'à 15MB</p>
                     </div>
                   </div>
                   {errors.images && (
@@ -1082,7 +1071,7 @@ export default function Feed({ searchQuery }) {
                 <button
                   type="submit"
                   className="w-full py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                  onClick={(e) => {
+                  onClick={() => {
                     console.log('BOUTON CLIQUÉ - Images:', imageFiles.length, 'Vidéo:', videoFile ? 'Oui' : 'Non');
                   }}
                 >
@@ -1215,15 +1204,20 @@ export default function Feed({ searchQuery }) {
               )}
             </div>
             
-            {/* Images et vidéos en miniature */}
+            {/* Images et vidéos */}
             <div className="px-3"> {/* Padding horizontal uniquement */}
-              {((post.images && post.images.length > 0) || post.image || post.video) && (
-                <div className="flex w-full gap-0"> {/* flex-row, médias côte à côte, prennent toute la largeur */}
-                  {/* Images */}
-                  {post.images && post.images.map((image, index) => (
+              {/* Images en haut */}
+              {post.images && post.images.length > 0 && (
+                <div className="flex w-full gap-1 flex-wrap mb-3"> {/* Images avec marge en bas */}
+                  {post.images.map((image, index) => (
                     <div
                       key={"img-" + index}
-                      className="overflow-hidden shadow-lg hover:scale-105 transition-transform cursor-pointer w-72 h-60"
+                      className={`overflow-hidden shadow-lg hover:scale-105 transition-transform cursor-pointer h-60 ${
+                        post.images.length === 1 ? 'w-full' :
+                        post.images.length === 2 ? 'w-[calc(50%-2px)]' :
+                        post.images.length === 3 ? 'w-[calc(33.333%-3px)]' :
+                        'w-[calc(25%-3px)]'
+                      }`}
                       onClick={() => openMediaModal('image', image)}
                     >
                       <img
@@ -1232,7 +1226,7 @@ export default function Feed({ searchQuery }) {
                         className="w-full h-full object-cover bg-gray-100"
                         onError={(e) => {
                           console.log('❌ Erreur de chargement image:', image);
-                          e.target.style.display = 'none';
+                          e.target.src = 'https://via.placeholder.com/300x200?text=Image+non+disponible';
                         }}
                         onLoad={() => {
                           console.log('✅ Image chargée avec succès:', image);
@@ -1240,25 +1234,28 @@ export default function Feed({ searchQuery }) {
                       />
                     </div>
                   ))}
-                  {/* Vidéo */}
-                  {post.video && (
-                    <div
-                      className="overflow-hidden shadow-lg hover:scale-105 transition-transform cursor-pointer w-72 h-60"
-                      onClick={() => openMediaModal('video', post.video)}
-                    >
-                      <video
-                        src={post.video}
-                        className="w-full h-full object-cover bg-black"
-                        controls
-                        onError={(e) => {
-                          console.log('❌ Erreur de chargement vidéo:', post.video);
-                        }}
-                        onLoadedData={() => {
-                          console.log('✅ Vidéo chargée avec succès:', post.video);
-                        }}
-                      />
-                    </div>
-                  )}
+                </div>
+              )}
+
+              {/* Vidéo en pleine largeur en dessous */}
+              {post.video && (
+                <div className="w-full">
+                  <div
+                    className="overflow-hidden shadow-lg hover:scale-105 transition-transform cursor-pointer w-full h-80"
+                    onClick={() => openMediaModal('video', post.video)}
+                  >
+                    <video
+                      src={post.video}
+                      className="w-full h-full object-cover bg-black"
+                      controls
+                      onError={() => {
+                        console.log('❌ Erreur de chargement vidéo:', post.video);
+                      }}
+                      onLoadedData={() => {
+                        console.log('✅ Vidéo chargée avec succès:', post.video);
+                      }}
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -1658,7 +1655,7 @@ export default function Feed({ searchQuery }) {
                         </label>
                         <p className="pl-1">ou glisser-déposer</p>
                       </div>
-                      <p className="text-xs text-gray-500">PNG, JPG, GIF jusqu'à 10MB</p>
+                      <p className="text-xs text-gray-500">PNG, JPG, GIF, WebP jusqu'à 15MB</p>
                     </div>
                   </div>
                   {errors.images && (

@@ -485,15 +485,20 @@ export default function UserProfile({ user, onBack }) {
                     </div>
                   )}
                   
-                  {/* Médias côte à côte comme dans le Feed */}
+                  {/* Images et vidéos avec nouveau layout */}
                   <div className="px-3">
-                    {((post.images && post.images.length > 0) || post.video) && (
-                      <div className="flex w-full gap-0">
-                        {/* Images */}
-                        {post.images && post.images.map((image, index) => (
+                    {/* Images en haut */}
+                    {post.images && post.images.length > 0 && (
+                      <div className="flex w-full gap-1 flex-wrap mb-3"> {/* Images avec marge en bas */}
+                        {post.images.map((image, index) => (
                           <div
                             key={"img-" + index}
-                            className="overflow-hidden shadow-lg hover:scale-105 transition-transform cursor-pointer w-72 h-60"
+                            className={`overflow-hidden shadow-lg hover:scale-105 transition-transform cursor-pointer h-60 ${
+                              post.images.length === 1 ? 'w-full' :
+                              post.images.length === 2 ? 'w-[calc(50%-2px)]' :
+                              post.images.length === 3 ? 'w-[calc(33.333%-3px)]' :
+                              'w-[calc(25%-3px)]'
+                            }`}
                             onClick={() => openMediaModal('image', image)}
                           >
                             <img
@@ -501,24 +506,37 @@ export default function UserProfile({ user, onBack }) {
                               alt={`Post image ${index + 1}`}
                               className="w-full h-full object-cover bg-gray-100"
                               onError={(e) => {
-                                e.target.style.display = 'none';
+                                console.log('❌ Erreur de chargement image:', image);
+                                e.target.src = 'https://via.placeholder.com/300x200?text=Image+non+disponible';
+                              }}
+                              onLoad={() => {
+                                console.log('✅ Image chargée avec succès:', image);
                               }}
                             />
                           </div>
                         ))}
-                        {/* Vidéo */}
-                        {post.video && (
-                          <div
-                            className="overflow-hidden shadow-lg hover:scale-105 transition-transform cursor-pointer w-72 h-60"
-                            onClick={() => openMediaModal('video', post.video)}
-                          >
-                            <video
-                              src={post.video}
-                              className="w-full h-full object-cover bg-black"
-                              controls
-                            />
-                          </div>
-                        )}
+                      </div>
+                    )}
+
+                    {/* Vidéo en pleine largeur en dessous */}
+                    {post.video && (
+                      <div className="w-full">
+                        <div
+                          className="overflow-hidden shadow-lg hover:scale-105 transition-transform cursor-pointer w-full h-80"
+                          onClick={() => openMediaModal('video', post.video)}
+                        >
+                          <video
+                            src={post.video}
+                            className="w-full h-full object-cover bg-black"
+                            controls
+                            onError={() => {
+                              console.log('❌ Erreur de chargement vidéo:', post.video);
+                            }}
+                            onLoadedData={() => {
+                              console.log('✅ Vidéo chargée avec succès:', post.video);
+                            }}
+                          />
+                        </div>
                       </div>
                     )}
                   </div>

@@ -60,6 +60,16 @@ export default function Recommendations() {  const { user } = useAuth();
       }
       
       if (response.status === 'success') {
+        console.log('📝 Posts recommandés reçus:', response.data);
+        response.data.forEach((post, index) => {
+          console.log(`Post ${index + 1}:`, {
+            id: post.id,
+            image: post.image,
+            images: post.images,
+            video: post.video
+          });
+        });
+
         setRecommendedPosts(response.data);
         // Initialiser l'état des posts sauvegardés à partir des données reçues
         const savedStates = {};
@@ -381,36 +391,61 @@ export default function Recommendations() {  const { user } = useAuth();
                   </div>
                 </div>
 
-                {/* Images et vidéos en pleine largeur */}
-                {(post.image || post.video) && (
-                  <div className="flex">
-                    {post.image && (
+                {/* Images et vidéos avec nouveau layout */}
+                <div className="px-3">
+                  {/* Images en haut */}
+                  {post.images && post.images.length > 0 && (
+                    <div className="flex w-full gap-1 flex-wrap mb-3"> {/* Images avec marge en bas */}
+                      {post.images.map((image, index) => (
+                        <div
+                          key={"img-" + index}
+                          className={`overflow-hidden shadow-lg hover:scale-105 transition-transform cursor-pointer h-60 ${
+                            post.images.length === 1 ? 'w-full' :
+                            post.images.length === 2 ? 'w-[calc(50%-2px)]' :
+                            post.images.length === 3 ? 'w-[calc(33.333%-3px)]' :
+                            'w-[calc(25%-3px)]'
+                          }`}
+                          onClick={() => openMediaModal('image', `http://localhost/localbook/backend/api/Uploads/posts/${image}`)}
+                        >
+                          <img
+                            src={`http://localhost/localbook/backend/api/Uploads/posts/${image}`}
+                            alt={`Post image ${index + 1}`}
+                            className="w-full h-full object-cover bg-gray-100"
+                            onError={(e) => {
+                              console.log('❌ Erreur de chargement image:', image);
+                              e.target.src = 'https://via.placeholder.com/300x200?text=Image+non+disponible';
+                            }}
+                            onLoad={() => {
+                              console.log('✅ Image chargée avec succès:', image);
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Vidéo en pleine largeur en dessous */}
+                  {post.video && (
+                    <div className="w-full">
                       <div
-                        className="w-72 h-60 overflow-hidden shadow-lg hover:scale-105 transition-transform cursor-pointer"
-                        onClick={() => openMediaModal('image', `http://localhost/localbook/backend/api/Uploads/posts/${post.image}`)}
-                      >
-                        <img
-                          src={`http://localhost/localbook/backend/api/Uploads/posts/${post.image}`}
-                          alt="Post"
-                          className="w-full h-full object-cover"
-                          onError={(e) => e.target.src = "https://via.placeholder.com/600x400"}
-                        />
-                      </div>
-                    )}
-                    {post.video && (
-                      <div
-                        className="w-72 h-60 overflow-hidden shadow-lg hover:scale-105 transition-transform cursor-pointer"
+                        className="overflow-hidden shadow-lg hover:scale-105 transition-transform cursor-pointer w-full h-80"
                         onClick={() => openMediaModal('video', `http://localhost/localbook/backend/api/Uploads/posts/${post.video}`)}
                       >
                         <video
-                          className="w-full h-full object-cover"
                           src={`http://localhost/localbook/backend/api/Uploads/posts/${post.video}`}
+                          className="w-full h-full object-cover bg-black"
                           controls
+                          onError={() => {
+                            console.log('❌ Erreur de chargement vidéo:', post.video);
+                          }}
+                          onLoadedData={() => {
+                            console.log('✅ Vidéo chargée avec succès:', post.video);
+                          }}
                         />
                       </div>
-                    )}
-                  </div>
-                )}
+                    </div>
+                  )}
+                </div>
 
                 {/* Actions */}
                 <div className="px-4 py-2 border-t border-gray-100">
