@@ -38,6 +38,13 @@ export default function ProfilePage() {
   const [loadingFollowers, setLoadingFollowers] = useState(false);
   const [loadingFollowing, setLoadingFollowing] = useState(false);
 
+  // États pour tracker les statuts de suivi des followers
+  const [followersFollowStatus, setFollowersFollowStatus] = useState({});
+  const [followingInProgress, setFollowingInProgress] = useState(new Set());
+
+  // États pour la section suivis (following)
+  const [unfollowingInProgress, setUnfollowingInProgress] = useState(new Set());
+
   // États pour le modal des médias
   const [showMediaModal, setShowMediaModal] = useState(false);
   const [currentMedia, setCurrentMedia] = useState({ type: null, src: null });
@@ -171,6 +178,9 @@ export default function ProfilePage() {
             followers: result.followers.length
           }
         }));
+
+        // Vérifier les statuts de suivi pour chaque follower
+        await checkFollowersFollowStatus(result.followers);
       } else {
         console.error('Erreur lors du chargement des followers:', result.error);
       }
@@ -178,6 +188,31 @@ export default function ProfilePage() {
       console.error('Erreur lors du chargement des followers:', error);
     } finally {
       setLoadingFollowers(false);
+    }
+  };
+
+  // Fonction pour vérifier les statuts de suivi des followers
+  const checkFollowersFollowStatus = async (followers) => {
+    if (!user || !followers.length) return;
+
+    try {
+      const statusPromises = followers.map(async (follower) => {
+        const result = await FollowService.checkFollowStatus(user.ID_USER, follower.id);
+        return {
+          followerId: follower.id,
+          isFollowing: result.success ? result.is_following : false
+        };
+      });
+
+      const statuses = await Promise.all(statusPromises);
+      const statusMap = {};
+      statuses.forEach(status => {
+        statusMap[status.followerId] = status.isFollowing;
+      });
+
+      setFollowersFollowStatus(statusMap);
+    } catch (error) {
+      console.error('Erreur lors de la vérification des statuts de suivi:', error);
     }
   };
 
@@ -205,6 +240,76 @@ export default function ProfilePage() {
       console.error('Erreur lors du chargement des following:', error);
     } finally {
       setLoadingFollowing(false);
+    }
+  };
+
+  // Fonction pour gérer le follow/unfollow d'un follower
+  const handleFollowerToggle = async (follower) => {
+    if (!user || followingInProgress.has(follower.id)) return;
+
+    setFollowingInProgress(prev => new Set([...prev, follower.id]));
+
+    try {
+      const isCurrentlyFollowing = followersFollowStatus[follower.id];
+      let result;
+
+      if (isCurrentlyFollowing) {
+        // Unfollow
+        result = await FollowService.unfollow(user.ID_USER, follower.id);
+      } else {
+        // Follow
+        result = await FollowService.follow(user.ID_USER, follower.id);
+      }
+
+      if (result.success) {
+        // Mettre à jour le statut de suivi
+        setFollowersFollowStatus(prev => ({
+          ...prev,
+          [follower.id]: !isCurrentlyFollowing
+        }));
+
+        // Recharger les données de following pour mettre à jour les stats
+        await loadFollowing();
+      } else {
+        console.error('Erreur lors du toggle follow:', result.error);
+      }
+    } catch (error) {
+      console.error('Erreur lors du toggle follow:', error);
+    } finally {
+      setFollowingInProgress(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(follower.id);
+        return newSet;
+      });
+    }
+  };
+
+  // Fonction pour gérer l'unfollow dans la section suivis
+  const handleUnfollowFromFollowing = async (person) => {
+    if (!user || unfollowingInProgress.has(person.id)) return;
+
+    setUnfollowingInProgress(prev => new Set([...prev, person.id]));
+
+    try {
+      const result = await FollowService.unfollow(user.ID_USER, person.id);
+
+      if (result.success) {
+        // Recharger les données de following pour mettre à jour la liste et les stats
+        await loadFollowing();
+
+        // Aussi recharger les followers au cas où cette personne nous suivait
+        await loadFollowers();
+      } else {
+        console.error('Erreur lors de l\'unfollow:', result.error);
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'unfollow:', error);
+    } finally {
+      setUnfollowingInProgress(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(person.id);
+        return newSet;
+      });
     }
   };
 
@@ -1621,8 +1726,21 @@ export default function ProfilePage() {
                           {follower.status === 'online' ? 'En ligne' : 'Hors ligne'}
                         </div>
                       </div>
-                      <button className="ml-2 bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs font-medium hover:bg-blue-100 transition-colors">
-                        Suivre
+                      <button
+                        className={`ml-2 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                          followingInProgress.has(follower.id)
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            : followersFollowStatus[follower.id]
+                              ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                              : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                        }`}
+                        onClick={() => handleFollowerToggle(follower)}
+                        disabled={followingInProgress.has(follower.id)}
+                      >
+                        {followingInProgress.has(follower.id)
+                          ? (followersFollowStatus[follower.id] ? 'Suppression...' : 'Ajout...')
+                          : (followersFollowStatus[follower.id] ? 'Ne plus suivre' : 'Suivre')
+                        }
                       </button>
                     </div>
                   ))
@@ -1682,8 +1800,16 @@ export default function ProfilePage() {
                           {person.status === 'online' ? 'En ligne' : 'Hors ligne'}
                         </div>
                       </div>
-                      <button className="ml-2 bg-red-50 text-red-600 px-3 py-1 rounded-full text-xs font-medium hover:bg-red-100 transition-colors">
-                        Ne plus suivre
+                      <button
+                        className={`ml-2 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                          unfollowingInProgress.has(person.id)
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            : 'bg-red-50 text-red-600 hover:bg-red-100'
+                        }`}
+                        onClick={() => handleUnfollowFromFollowing(person)}
+                        disabled={unfollowingInProgress.has(person.id)}
+                      >
+                        {unfollowingInProgress.has(person.id) ? 'Suppression...' : 'Ne plus suivre'}
                       </button>
                     </div>
                   ))
