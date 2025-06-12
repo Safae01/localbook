@@ -21,6 +21,26 @@ class FollowService {
         }
     }
 
+    static async getFollowers(userId) {
+        try {
+            const response = await fetch(`${API_URL}/users/get_followers.php?user_id=${userId}`);
+
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error('Error getting followers list:', error);
+            return {
+                success: false,
+                error: 'Error getting followers list: ' + (error.message || 'Unknown error'),
+                followers: []
+            };
+        }
+    }
+
     static async unfollow(followerId, followedId) {
         try {
             const response = await fetch(`${API_URL}/users/unfollow.php`, {

@@ -4,6 +4,7 @@ import AnnonceService from '../services/AnnonceService';
 import CommentService from '../services/CommentService';
 import LikeService from '../services/LikeService';
 import EditProfileService from '../services/EditProfileService';
+import FollowService from '../services/FollowService';
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -30,6 +31,12 @@ export default function ProfilePage() {
   const [rawVideo, setRawVideo] = useState(null);
   const [userAnnonces, setUserAnnonces] = useState([]);
   const [loadingAnnonces, setLoadingAnnonces] = useState(false);
+
+  // États pour les followers et following réels
+  const [realFollowers, setRealFollowers] = useState([]);
+  const [realFollowing, setRealFollowing] = useState([]);
+  const [loadingFollowers, setLoadingFollowers] = useState(false);
+  const [loadingFollowing, setLoadingFollowing] = useState(false);
 
   // États pour le modal des médias
   const [showMediaModal, setShowMediaModal] = useState(false);
@@ -58,23 +65,7 @@ export default function ProfilePage() {
     email: user ? user.EMAIL : "",
     phone: "",
     website: "",
-    birthday: "",
-    followers: [
-      { id: 1, name: 'Sophie Lefebvre', avatar: 'https://via.placeholder.com/40', status: 'online' },
-      { id: 2, name: 'Lucas Bernard', avatar: 'https://via.placeholder.com/40', status: 'offline' },
-      { id: 3, name: 'Emma Petit', avatar: 'https://via.placeholder.com/40', status: 'online' },
-      { id: 4, name: 'Hugo Dubois', avatar: 'https://via.placeholder.com/40', status: 'online' },
-      { id: 5, name: 'Léa Moreau', avatar: 'https://via.placeholder.com/40', status: 'offline' },
-      { id: 6, name: 'Gabriel Roux', avatar: 'https://via.placeholder.com/40', status: 'online' },
-      { id: 7, name: 'Camille Martin', avatar: 'https://via.placeholder.com/40', status: 'offline' },
-      { id: 8, name: 'Thomas Dubois', avatar: 'https://via.placeholder.com/40', status: 'online' },
-    ],
-    following: [
-      { id: 1, name: 'Antoine Dupont', avatar: 'https://via.placeholder.com/40', status: 'online' },
-      { id: 2, name: 'Marie Leroy', avatar: 'https://via.placeholder.com/40', status: 'offline' },
-      { id: 3, name: 'Paul Durand', avatar: 'https://via.placeholder.com/40', status: 'online' },
-      { id: 4, name: 'Julie Moreau', avatar: 'https://via.placeholder.com/40', status: 'offline' },
-    ]
+    birthday: ""
   });
   
   // État pour stocker les modifications temporaires
@@ -89,12 +80,12 @@ export default function ProfilePage() {
   const [coverPhotoPreview, setCoverPhotoPreview] = useState(userProfile.coverPhoto);
 
   // Filtrer les abonnés en fonction de la recherche
-  const filteredFollowers = userProfile.followers.filter(
+  const filteredFollowers = realFollowers.filter(
     follower => follower.name.toLowerCase().includes(searchFollowers.toLowerCase())
   );
 
   // Filtrer les personnes suivies en fonction de la recherche
-  const filteredFollowing = userProfile.following.filter(
+  const filteredFollowing = realFollowing.filter(
     person => person.name.toLowerCase().includes(searchFollowing.toLowerCase())
   );
 
@@ -163,6 +154,60 @@ export default function ProfilePage() {
     }
   };
 
+  // Fonction pour charger les followers (abonnés)
+  const loadFollowers = async () => {
+    if (!user) return;
+
+    setLoadingFollowers(true);
+    try {
+      const result = await FollowService.getFollowers(user.ID_USER);
+      if (result.success) {
+        setRealFollowers(result.followers);
+        // Mettre à jour le nombre de followers dans les stats
+        setUserProfile(prev => ({
+          ...prev,
+          stats: {
+            ...prev.stats,
+            followers: result.followers.length
+          }
+        }));
+      } else {
+        console.error('Erreur lors du chargement des followers:', result.error);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des followers:', error);
+    } finally {
+      setLoadingFollowers(false);
+    }
+  };
+
+  // Fonction pour charger les following (abonnements)
+  const loadFollowing = async () => {
+    if (!user) return;
+
+    setLoadingFollowing(true);
+    try {
+      const result = await FollowService.getFollowing(user.ID_USER);
+      if (result.success) {
+        setRealFollowing(result.following);
+        // Mettre à jour le nombre de following dans les stats
+        setUserProfile(prev => ({
+          ...prev,
+          stats: {
+            ...prev.stats,
+            following: result.following.length
+          }
+        }));
+      } else {
+        console.error('Erreur lors du chargement des following:', result.error);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des following:', error);
+    } finally {
+      setLoadingFollowing(false);
+    }
+  };
+
   // Mettre à jour le profil quand les données utilisateur changent
   useEffect(() => {
     if (user) {
@@ -171,6 +216,10 @@ export default function ProfilePage() {
 
       // Charger les annonces de l'utilisateur
       loadUserAnnonces();
+
+      // Charger les followers et following
+      loadFollowers();
+      loadFollowing();
     }
   }, [user]);
 
@@ -1539,33 +1588,45 @@ export default function ProfilePage() {
               </div>
               
               <div className="p-2">
-                {userProfile.followers
-                  .filter(follower => follower.name.toLowerCase().includes(searchFollowers.toLowerCase()))
-                  .map(follower => (
-                  <div 
-                    key={follower.id} 
-                    className="flex items-center p-2 rounded-md hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="relative mr-3">
-                      <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-blue-100">
-                        <img src={follower.avatar} alt={follower.name} className="w-full h-full object-cover" />
-                      </div>
-                      {follower.status === 'online' && (
-                        <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-green-500 border-2 border-white"></div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm text-gray-800 truncate">{follower.name}</div>
-                      <div className="text-xs text-gray-500 flex items-center">
-                        <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${follower.status === 'online' ? 'bg-green-500' : 'bg-gray-400'}`}></span>
-                        {follower.status === 'online' ? 'En ligne' : 'Hors ligne'}
-                      </div>
-                    </div>
-                    <button className="ml-2 bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs font-medium hover:bg-blue-100 transition-colors">
-                      Suivre
-                    </button>
+                {loadingFollowers ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
                   </div>
-                ))}
+                ) : filteredFollowers.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    {searchFollowers ? 'Aucun abonné trouvé' : 'Aucun abonné pour le moment'}
+                  </div>
+                ) : (
+                  filteredFollowers.map(follower => (
+                    <div
+                      key={follower.id}
+                      className="flex items-center p-2 rounded-md hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="relative mr-3">
+                        <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-blue-100">
+                          <img
+                            src={follower.avatar || "https://via.placeholder.com/40?text=" + follower.name.charAt(0)}
+                            alt={follower.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        {follower.status === 'online' && (
+                          <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-green-500 border-2 border-white"></div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm text-gray-800 truncate">{follower.name}</div>
+                        <div className="text-xs text-gray-500 flex items-center">
+                          <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${follower.status === 'online' ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+                          {follower.status === 'online' ? 'En ligne' : 'Hors ligne'}
+                        </div>
+                      </div>
+                      <button className="ml-2 bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs font-medium hover:bg-blue-100 transition-colors">
+                        Suivre
+                      </button>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           )}
@@ -1588,31 +1649,45 @@ export default function ProfilePage() {
               </div>
               
               <div className="p-2">
-                {filteredFollowing.map(person => (
-                  <div 
-                    key={person.id} 
-                    className="flex items-center p-2 rounded-md hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="relative mr-3">
-                      <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-red-100">
-                        <img src={person.avatar} alt={person.name} className="w-full h-full object-cover" />
-                      </div>
-                      {person.status === 'online' && (
-                        <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-green-500 border-2 border-white"></div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm text-gray-800 truncate">{person.name}</div>
-                      <div className="text-xs text-gray-500 flex items-center">
-                        <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${person.status === 'online' ? 'bg-green-500' : 'bg-gray-400'}`}></span>
-                        {person.status === 'online' ? 'En ligne' : 'Hors ligne'}
-                      </div>
-                    </div>
-                    <button className="ml-2 bg-red-50 text-red-600 px-3 py-1 rounded-full text-xs font-medium hover:bg-red-100 transition-colors">
-                      Ne plus suivre
-                    </button>
+                {loadingFollowing ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
                   </div>
-                ))}
+                ) : filteredFollowing.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    {searchFollowing ? 'Aucune personne suivie trouvée' : 'Vous ne suivez personne pour le moment'}
+                  </div>
+                ) : (
+                  filteredFollowing.map(person => (
+                    <div
+                      key={person.id}
+                      className="flex items-center p-2 rounded-md hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="relative mr-3">
+                        <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-red-100">
+                          <img
+                            src={person.avatar || "https://via.placeholder.com/40?text=" + person.name.charAt(0)}
+                            alt={person.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        {person.status === 'online' && (
+                          <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-green-500 border-2 border-white"></div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm text-gray-800 truncate">{person.name}</div>
+                        <div className="text-xs text-gray-500 flex items-center">
+                          <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${person.status === 'online' ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+                          {person.status === 'online' ? 'En ligne' : 'Hors ligne'}
+                        </div>
+                      </div>
+                      <button className="ml-2 bg-red-50 text-red-600 px-3 py-1 rounded-full text-xs font-medium hover:bg-red-100 transition-colors">
+                        Ne plus suivre
+                      </button>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           )}
