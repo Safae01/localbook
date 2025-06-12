@@ -17,6 +17,10 @@ export default function Recommendations() {  const { user } = useAuth();
   const [commentText, setCommentText] = useState({});
   const [selectedUser, setSelectedUser] = useState(null);
 
+  // États pour le modal des médias
+  const [showMediaModal, setShowMediaModal] = useState(false);
+  const [currentMedia, setCurrentMedia] = useState({ type: null, src: null });
+
   // Fonction pour afficher le profil d'un utilisateur
   const showUserProfile = (userId, userName, userAvatar) => {
     const userObj = {
@@ -33,6 +37,17 @@ export default function Recommendations() {  const { user } = useAuth();
   // Fonction pour revenir aux recommandations
   const backToRecommendations = () => {
     setSelectedUser(null);
+  };
+
+  // Fonctions pour gérer le modal des médias
+  const openMediaModal = (type, src) => {
+    setCurrentMedia({ type, src });
+    setShowMediaModal(true);
+  };
+
+  const closeMediaModal = () => {
+    setShowMediaModal(false);
+    setCurrentMedia({ type: null, src: null });
   };
 
   const fetchRecommendedPosts = async () => {
@@ -370,7 +385,10 @@ export default function Recommendations() {  const { user } = useAuth();
                 {(post.image || post.video) && (
                   <div className="flex">
                     {post.image && (
-                      <div className="flex-1 h-[400px]"> {/* Hauteur fixe plus grande */}
+                      <div
+                        className="w-72 h-60 overflow-hidden shadow-lg hover:scale-105 transition-transform cursor-pointer"
+                        onClick={() => openMediaModal('image', `http://localhost/localbook/backend/api/Uploads/posts/${post.image}`)}
+                      >
                         <img
                           src={`http://localhost/localbook/backend/api/Uploads/posts/${post.image}`}
                           alt="Post"
@@ -380,8 +398,11 @@ export default function Recommendations() {  const { user } = useAuth();
                       </div>
                     )}
                     {post.video && (
-                      <div className="flex-1 h-[400px]"> {/* Hauteur fixe plus grande */}
-                        <video 
+                      <div
+                        className="w-72 h-60 overflow-hidden shadow-lg hover:scale-105 transition-transform cursor-pointer"
+                        onClick={() => openMediaModal('video', `http://localhost/localbook/backend/api/Uploads/posts/${post.video}`)}
+                      >
+                        <video
                           className="w-full h-full object-cover"
                           src={`http://localhost/localbook/backend/api/Uploads/posts/${post.video}`}
                           controls
@@ -494,6 +515,49 @@ export default function Recommendations() {  const { user } = useAuth();
           )}
         </div>
       </div>
+
+      {/* Modal pour afficher les médias en grand */}
+      {showMediaModal && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4"
+          onClick={closeMediaModal}
+        >
+          <div className="relative max-w-4xl max-h-full w-full h-full flex items-center justify-center">
+            {/* Bouton fermer */}
+            <button
+              onClick={closeMediaModal}
+              className="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
+            >
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Contenu du modal */}
+            <div
+              className="w-full h-full flex items-center justify-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {currentMedia.type === 'image' ? (
+                <img
+                  src={currentMedia.src}
+                  alt="Image agrandie"
+                  className="max-w-full max-h-full object-contain cursor-pointer"
+                  onClick={closeMediaModal}
+                />
+              ) : currentMedia.type === 'video' ? (
+                <video
+                  src={currentMedia.src}
+                  controls
+                  autoPlay
+                  className="max-w-full max-h-full object-contain"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ) : null}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

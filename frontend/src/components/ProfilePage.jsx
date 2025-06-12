@@ -61,8 +61,8 @@ export default function ProfilePage() {
   const [userProfile, setUserProfile] = useState({
     name: user ? user.NOM : "",
     username: user ? `@${user.NOM.toLowerCase().replace(/\s+/g, '')}` : "",
-    coverPhoto: "https://via.placeholder.com/1200x300",
-    avatar: "https://via.placeholder.com/150",
+    coverPhoto: user && user.IMG_COUVERT ? EditProfileService.getCoverImageUrl(user.IMG_COUVERT) : "https://via.placeholder.com/1200x300",
+    avatar: user && user.IMG_PROFIL ? EditProfileService.getProfileImageUrl(user.IMG_PROFIL) : "https://via.placeholder.com/150",
     bio: "",
     joinDate: "Membre depuis 2024",
     stats: {
@@ -732,8 +732,19 @@ export default function ProfilePage() {
         <div className="fixed top-16 left-0 right-0 bg-white shadow-md py-2 px-4 z-10 flex items-center justify-between">
           <div className="w-8"></div> {/* Espace pour équilibrer */}
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 rounded-full overflow-hidden">
-              <img src={userProfile.avatar} alt={userProfile.name} className="w-full h-full object-cover" />
+            <div
+              className="w-8 h-8 rounded-full overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => openMediaModal('image', userProfile.avatar)}
+              title="Voir la photo de profil"
+            >
+              <img
+                src={userProfile.avatar}
+                alt={userProfile.name}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.target.src = "https://via.placeholder.com/32?text=" + (userProfile.name ? userProfile.name.charAt(0) : "U");
+                }}
+              />
             </div>
             <h2 className="font-medium">{userProfile.name}</h2>
           </div>
@@ -1336,12 +1347,34 @@ export default function ProfilePage() {
       <div className="max-w-4xl mx-auto bg-white shadow-sm">
         {/* Couverture et photo de profil */}
         <div className="relative">
-          <div className="h-48 bg-gray-200">
-            <img src={userProfile.coverPhoto} alt="Couverture" className="w-full h-full object-cover" />
+          <div
+            className="h-48 bg-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
+            onClick={() => openMediaModal('image', userProfile.coverPhoto)}
+            title="Cliquez pour agrandir la photo de couverture"
+          >
+            <img
+              src={userProfile.coverPhoto}
+              alt="Couverture"
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.target.src = "https://via.placeholder.com/1200x300?text=Photo+de+couverture";
+              }}
+            />
           </div>
-          <div className="absolute bottom-0 left-8 transform translate-y-1/2 border-4 border-white rounded-full overflow-hidden">
+          <div
+            className="absolute bottom-0 left-8 transform translate-y-1/2 border-4 border-white rounded-full overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+            onClick={() => openMediaModal('image', userProfile.avatar)}
+            title="Cliquez pour agrandir la photo de profil"
+          >
             <div className="w-32 h-32 bg-gray-200">
-              <img src={userProfile.avatar} alt={userProfile.name} className="w-full h-full object-cover" />
+              <img
+                src={userProfile.avatar}
+                alt={userProfile.name}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.target.src = "https://via.placeholder.com/150?text=" + (userProfile.name ? userProfile.name.charAt(0) : "U");
+                }}
+              />
             </div>
           </div>
         </div>
@@ -1431,8 +1464,19 @@ export default function ProfilePage() {
               {/* Contenu existant des publications */}
               <div className="bg-white rounded-lg shadow p-4 mb-4">
                 <div className="flex items-center space-x-2">
-                  <div className="w-10 h-10 rounded-full bg-gray-300 overflow-hidden">
-                    <img src={userProfile.avatar} alt="Profile" className="w-full h-full object-cover" />
+                  <div
+                    className="w-10 h-10 rounded-full bg-gray-300 overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => openMediaModal('image', userProfile.avatar)}
+                    title="Voir la photo de profil"
+                  >
+                    <img
+                      src={userProfile.avatar}
+                      alt="Profile"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.src = "https://via.placeholder.com/40?text=" + (userProfile.name ? userProfile.name.charAt(0) : "U");
+                      }}
+                    />
                   </div>
                   <input 
                     type="text" 
@@ -1473,8 +1517,19 @@ export default function ProfilePage() {
                       <div className="p-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 rounded-full bg-gray-300 overflow-hidden">
-                              <img src={userProfile.avatar} alt="Profile" className="w-full h-full object-cover" />
+                            <div
+                              className="w-10 h-10 rounded-full bg-gray-300 overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                              onClick={() => openMediaModal('image', userProfile.avatar)}
+                              title="Voir la photo de profil"
+                            >
+                              <img
+                                src={userProfile.avatar}
+                                alt="Profile"
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.target.src = "https://via.placeholder.com/40?text=" + (userProfile.name ? userProfile.name.charAt(0) : "U");
+                                }}
+                              />
                             </div>
                             <div>
                               <div className="font-medium">{userProfile.name}</div>

@@ -66,13 +66,13 @@ const EditProfileService = {
     // Helper pour obtenir l'URL de l'image de profil
   getProfileImageUrl(imageName) {
     if (!imageName) return 'https://via.placeholder.com/150';
-    return `${API_BASE_URL}/uploads/${imageName}`;
+    return `${API_BASE_URL}/Uploads/users/${imageName}`;
   },
-  
+
   // Helper pour obtenir l'URL de l'image de couverture
   getCoverImageUrl(imageName) {
     if (!imageName) return 'https://via.placeholder.com/1200x300';
-    return `${API_BASE_URL}/uploads/${imageName}`;
+    return `${API_BASE_URL}/Uploads/users/${imageName}`;
   },
 };
 
