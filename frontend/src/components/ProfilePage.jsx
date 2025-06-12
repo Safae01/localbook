@@ -34,6 +34,10 @@ export default function ProfilePage() {
   // États pour le modal des médias
   const [showMediaModal, setShowMediaModal] = useState(false);
   const [currentMedia, setCurrentMedia] = useState({ type: null, src: null });
+
+  // États pour le modal de confirmation de suppression
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [postToDelete, setPostToDelete] = useState(null);
   
   // Données du profil utilisateur - utilise uniquement les vraies données de l'utilisateur connecté
   const [userProfile, setUserProfile] = useState({
@@ -498,6 +502,56 @@ export default function ProfilePage() {
         });
     }
   }, [user, userAnnonces]);
+
+  // Fonction pour ouvrir le modal de confirmation de suppression
+  const handleDeletePost = (postId) => {
+    if (!user) {
+      alert('Vous devez être connecté pour supprimer un post');
+      return;
+    }
+    setPostToDelete(postId);
+    setShowDeleteModal(true);
+  };
+
+  // Fonction pour confirmer la suppression
+  const confirmDeletePost = async () => {
+    if (!postToDelete) return;
+
+    try {
+      const result = await AnnonceService.deleteAnnonce(postToDelete, user.ID_USER);
+
+      if (result.success) {
+        // Supprimer le post de la liste locale
+        setUserAnnonces(prevAnnonces => prevAnnonces.filter(annonce => annonce.ID_POST !== postToDelete));
+
+        // Mettre à jour le nombre de posts dans le profil
+        setUserProfile(prev => ({
+          ...prev,
+          stats: {
+            ...prev.stats,
+            posts: prev.stats.posts - 1
+          }
+        }));
+
+        // Fermer le modal et réinitialiser
+        setShowDeleteModal(false);
+        setPostToDelete(null);
+
+        alert('Post supprimé avec succès !');
+      } else {
+        alert('Erreur lors de la suppression du post : ' + result.error);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la suppression du post:', error);
+      alert('Une erreur est survenue lors de la suppression du post');
+    }
+  };
+
+  // Fonction pour annuler la suppression
+  const cancelDeletePost = () => {
+    setShowDeleteModal(false);
+    setPostToDelete(null);
+  };
 
   return (
     <main className="flex-1 overflow-y-auto bg-gray-100 relative">
@@ -1245,14 +1299,27 @@ export default function ProfilePage() {
                   userAnnonces.map(annonce => (
                     <div key={annonce.ID_POST} className="bg-white rounded-lg shadow overflow-hidden relative">
                       <div className="p-4">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 rounded-full bg-gray-300 overflow-hidden">
-                            <img src={userProfile.avatar} alt="Profile" className="w-full h-full object-cover" />
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 rounded-full bg-gray-300 overflow-hidden">
+                              <img src={userProfile.avatar} alt="Profile" className="w-full h-full object-cover" />
+                            </div>
+                            <div>
+                              <div className="font-medium">{userProfile.name}</div>
+                              <div className="text-xs text-gray-500">{annonce.TIME_AGO}</div>
+                            </div>
                           </div>
-                          <div>
-                            <div className="font-medium">{userProfile.name}</div>
-                            <div className="text-xs text-gray-500">{annonce.TIME_AGO}</div>
-                          </div>
+
+                          {/* Bouton de suppression */}
+                          <button
+                            className="text-gray-400 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50"
+                            onClick={() => handleDeletePost(annonce.ID_POST)}
+                            title="Supprimer ce post"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1H8a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                          </button>
                         </div>
 
                         {/* Tags colorés comme dans le Feed */}
@@ -1727,6 +1794,49 @@ export default function ProfilePage() {
                   onClick={(e) => e.stopPropagation()}
                 />
               ) : null}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmation de suppression */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center mb-4">
+                <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                  <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+              </div>
+
+              <div className="text-center">
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Supprimer le post
+                </h3>
+                <p className="text-sm text-gray-500 mb-6">
+                  Êtes-vous sûr de vouloir supprimer ce post ? Cette action est irréversible et supprimera également tous les commentaires et likes associés.
+                </p>
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  type="button"
+                  className="flex-1 bg-white border border-gray-300 rounded-md px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  onClick={cancelDeletePost}
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  className="flex-1 bg-red-600 border border-transparent rounded-md px-4 py-2 text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                  onClick={confirmDeletePost}
+                >
+                  Supprimer
+                </button>
+              </div>
             </div>
           </div>
         </div>

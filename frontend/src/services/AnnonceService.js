@@ -109,6 +109,31 @@ const AnnonceService = {
     getVideoUrl(videoName) {
         if (!videoName) return null;
         return `http://localhost/localbook/backend/api/Uploads/posts/${videoName}`;
+    },
+
+    // Delete annonce
+    async deleteAnnonce(postId, userId) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/delete.php`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    postId: postId,
+                    userId: userId
+                })
+            });
+
+            const data = await response.json();
+
+            return response.ok
+                ? { success: true, message: data.message }
+                : { success: false, error: data.error };
+        } catch (error) {
+            console.error('Delete annonce error:', error);
+            return { success: false, error: 'Erreur de connexion au serveur' };
+        }
     }
 };
 
