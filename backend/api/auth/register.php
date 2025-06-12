@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $data = $_POST;
 
 // Check required fields
-if (empty($data['NOM']) || empty($data['CIN_NUM']) || empty($data['EMAIL']) || empty($data['MDPS'])) {
+if (empty($data['NOM']) || empty($data['CIN_NUM']) || empty($data['STATUT']) || empty($data['EMAIL']) || empty($data['MDPS'])) {
     http_response_code(400);
     echo json_encode(["error" => "Veuillez remplir tous les champs"]);
     ob_end_flush();
@@ -124,11 +124,12 @@ $hashed_password = password_hash($data['MDPS'], PASSWORD_DEFAULT);
 
 // Insert user
 try {
-    $sql = $db->prepare("INSERT INTO user (NOM, CIN_NUM, CIN_IMG, EMAIL, MDPS, ID_ADMIN) VALUES (:nom, :cin, :cin_img, :email, :password, :id_admin)");
+    $sql = $db->prepare("INSERT INTO user (NOM, CIN_NUM, CIN_IMG, STATUT, EMAIL, MDPS, ID_ADMIN) VALUES (:nom, :cin, :cin_img, :statut, :email, :password, :id_admin)");
     $sql->execute([
         ":nom" => $data['NOM'],
         ":cin" => $data['CIN_NUM'],
         ":cin_img" => $cin_img,
+        ":statut" => $data['STATUT'],
         ":email" => $data['EMAIL'],
         ":password" => $hashed_password,
         ":id_admin" => 1

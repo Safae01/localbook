@@ -811,18 +811,18 @@ export default function Feed({ searchQuery }) {
                         onChange={() => setDurationType('courte')}
                         className="h-5 w-5 text-blue-600 border-gray-300 focus:ring-blue-500"
                       />
-                      <span className="ml-3 text-gray-700">Courte durée</span>
+                      <span className="ml-3 text-gray-700">nuit</span>
                     </label>
                     <label className={`relative flex items-center p-3 rounded-xl border ${durationType === 'longue' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'} cursor-pointer hover:border-blue-300 transition-colors`}>
                       <input 
-                        type="radio" 
+                        type="radio" co
                         name="durationType" 
                         value="longue" 
                         checked={durationType === 'longue'}
                         onChange={() => setDurationType('longue')}
                         className="h-5 w-5 text-blue-600 border-gray-300 focus:ring-blue-500"
                       />
-                      <span className="ml-3 text-gray-700">Longue durée</span>
+                      <span className="ml-3 text-gray-700">mois</span>
                     </label>
                   </div>
                 </div>
@@ -1458,7 +1458,7 @@ export default function Feed({ searchQuery }) {
                         onChange={() => setDurationType('courte')}
                         className="h-5 w-5 text-blue-600 border-gray-300 focus:ring-blue-500"
                       />
-                      <span className="ml-3 text-gray-700">Courte durée</span>
+                      <span className="ml-3 text-gray-700">nuit</span>
                     </label>
                     <label className={`relative flex items-center p-3 rounded-xl border ${durationType === 'longue' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'} cursor-pointer hover:border-blue-300 transition-colors`}>
                       <input 
@@ -1469,14 +1469,14 @@ export default function Feed({ searchQuery }) {
                         onChange={() => setDurationType('longue')}
                         className="h-5 w-5 text-blue-600 border-gray-300 focus:ring-blue-500"
                       />
-                      <span className="ml-3 text-gray-700">Longue durée</span>
+                      <span className="ml-3 text-gray-700">mois</span>
                     </label>
                   </div>
                 </div>
                 
                 {/* Prix */}
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Prix (€/mois)</label>
+                  <label className="block text-sm font-medium text-gray-700">Prix (Dh)</label>
                   <input 
                     type="number" 
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 transition-colors hover:border-blue-300"

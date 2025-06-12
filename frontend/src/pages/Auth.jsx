@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext'; // Updated import
 export default function Auth() {
   const { register, login, error, success } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
-  const [form, setForm] = useState({ NOM: '', CIN_NUM: '', EMAIL: '', MDPS: '', confirmPassword: '' });
+  const [form, setForm] = useState({ NOM: '', CIN_NUM: '', STATUT: '', EMAIL: '', MDPS: '', confirmPassword: '' });
   const [cinFile, setCinFile] = useState(null);
   const [cinPreview, setCinPreview] = useState(null);
   const [validationErrors, setValidationErrors] = useState({});
@@ -76,6 +76,10 @@ export default function Auth() {
         errors.CIN_NUM = 'Le numéro de CIN est requis';
       }
 
+      if (!form.STATUT.trim()) {
+        errors.STATUT = 'Le statut est requis';
+      }
+
       if (!form.EMAIL.trim()) {
         errors.EMAIL = 'L\'email est requis';
       }
@@ -108,7 +112,7 @@ export default function Auth() {
 
     const body = isLogin
       ? { EMAIL: form.EMAIL, MDPS: form.MDPS }
-      : { NOM: form.NOM, CIN_NUM: form.CIN_NUM, EMAIL: form.EMAIL, MDPS: form.MDPS };
+      : { NOM: form.NOM, CIN_NUM: form.CIN_NUM, STATUT: form.STATUT, EMAIL: form.EMAIL, MDPS: form.MDPS };
 
     console.log('Données à envoyer:', body);
     console.log('Fichier CIN à envoyer:', cinFile);
@@ -121,7 +125,7 @@ export default function Auth() {
         // Après inscription réussie, basculer vers le mode login
         setTimeout(() => {
           setIsLogin(true);
-          setForm({ NOM: '', CIN_NUM: '', EMAIL: '', MDPS: '', confirmPassword: '' });
+          setForm({ NOM: '', CIN_NUM: '', STATUT: '', EMAIL: '', MDPS: '', confirmPassword: '' });
           setCinFile(null);
           setCinPreview(null);
           setValidationErrors({});
@@ -309,6 +313,33 @@ export default function Auth() {
                         placeholder="Entrez votre numéro de CIN"
                         required
                       />
+                      {validationErrors.CIN_NUM && (
+                        <p className="mt-1 text-sm text-red-600">{validationErrors.CIN_NUM}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label htmlFor="statut" className="block text-sm font-medium text-gray-700">
+                        Statut <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        id="statut"
+                        name="STATUT"
+                        value={form.STATUT}
+                        onChange={handleChange}
+                        className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 ${
+                          validationErrors.STATUT ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        required
+                      >
+                        <option value="">Sélectionnez votre statut</option>
+                        <option value="Étudiant">Propriétaire</option>
+                        <option value="Employé">client</option>
+                        <option value="Entrepreneur">intermédiaire</option>
+                        
+                      </select>
+                      {validationErrors.STATUT && (
+                        <p className="mt-1 text-sm text-red-600">{validationErrors.STATUT}</p>
+                      )}
                     </div>
                     <div>
                       <label htmlFor="cin-image" className="block text-sm font-medium text-gray-700">
