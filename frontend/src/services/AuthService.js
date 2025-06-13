@@ -9,6 +9,7 @@
         formData.append('NOM', userData.NOM);
         formData.append('CIN_NUM', userData.CIN_NUM);
         formData.append('STATUT', userData.STATUT);
+        formData.append('TELE', userData.TELE);
         formData.append('EMAIL', userData.EMAIL);
         formData.append('MDPS', userData.MDPS);
 

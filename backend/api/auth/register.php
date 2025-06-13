@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $data = $_POST;
 
 // Check required fields
-if (empty($data['NOM']) || empty($data['CIN_NUM']) || empty($data['STATUT']) || empty($data['EMAIL']) || empty($data['MDPS'])) {
+if (empty($data['NOM']) || empty($data['CIN_NUM']) || empty($data['STATUT']) || empty($data['TELE']) || empty($data['EMAIL']) || empty($data['MDPS'])) {
     http_response_code(400);
     echo json_encode(["error" => "Veuillez remplir tous les champs"]);
     ob_end_flush();
