@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Like API</title>
+</head>
+<body>
+    <h1>Test Like API</h1>
+    <button onclick="testLike()">Test Like</button>
+    <div id="result"></div>
+
+    <script>
+        async function testLike() {
+            try {
+                const response = await fetch('http://localhost/localbook/backend/api/likes/toggle.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        userId: 1,  // Changez selon vos utilisateurs
+                        postId: 1   // Changez selon vos posts
+                    })
+                });
+
+                const data = await response.json();
+                document.getElementById('result').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                
+                // Vérifier les notifications après le like
+                if (data.success && data.action === 'liked') {
+                    setTimeout(async () => {
+                        const notifResponse = await fetch('http://localhost/localbook/backend/api/notifications/get.php?user_id=2'); // Propriétaire du post
+                        const notifData = await notifResponse.json();
+                        document.getElementById('result').innerHTML += '<h3>Notifications après like:</h3><pre>' + JSON.stringify(notifData, null, 2) + '</pre>';
+                    }, 1000);
+                }
+            } catch (error) {
+                document.getElementById('result').innerHTML = 'Erreur: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

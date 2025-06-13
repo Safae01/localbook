@@ -74,6 +74,40 @@ try {
     $insertStmt->execute();
     
     if ($insertStmt->rowCount() > 0) {
+        // Créer une notification pour l'utilisateur suivi
+        // Vérifier si la table notifications existe
+        $checkTable = $db->query("SHOW TABLES LIKE 'notifications'");
+        if ($checkTable->rowCount() == 0) {
+            // Créer la table si elle n'existe pas
+            $createTableSQL = "
+                CREATE TABLE IF NOT EXISTS `notifications` (
+                  `ID_NOTIFICATION` int(11) NOT NULL AUTO_INCREMENT,
+                  `ID_USER_FROM` int(11) NOT NULL COMMENT 'Utilisateur qui fait l\'action',
+                  `ID_USER_TO` int(11) NOT NULL COMMENT 'Utilisateur qui reçoit la notification',
+                  `ID_POST` int(11) DEFAULT NULL COMMENT 'Post concerné (pour likes, commentaires)',
+                  `TYPE_NOTIFICATION` enum('like','comment','follow','mention') NOT NULL,
+                  `MESSAGE` text NOT NULL COMMENT 'Message de la notification',
+                  `IS_READ` tinyint(1) DEFAULT 0 COMMENT '0 = non lu, 1 = lu',
+                  `DATE_CREATED` timestamp NOT NULL DEFAULT current_timestamp(),
+                  PRIMARY KEY (`ID_NOTIFICATION`),
+                  KEY `FK_NOTIFICATION_USER_FROM` (`ID_USER_FROM`),
+                  KEY `FK_NOTIFICATION_USER_TO` (`ID_USER_TO`),
+                  KEY `FK_NOTIFICATION_POST` (`ID_POST`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+            ";
+            $db->exec($createTableSQL);
+        }
+
+        $message = "s'est abonné à vous";
+        $notifSql = $db->prepare("
+            INSERT INTO notifications (ID_USER_FROM, ID_USER_TO, ID_POST, TYPE_NOTIFICATION, MESSAGE, DATE_CREATED)
+            VALUES (?, ?, NULL, 'follow', ?, NOW())
+        ");
+        $notifResult = $notifSql->execute([$follower_id, $followed_id, $message]);
+
+        // Log pour debug
+        error_log("Notification follow créée: " . ($notifResult ? "Succès" : "Échec") . " - User $follower_id followed user $followed_id");
+
         echo json_encode([
             'success' => true,
             'message' => 'Successfully followed user'

@@ -92,7 +92,47 @@ try {
         error_log("User not found: ID_USER = $userId");
         throw new Exception("Utilisateur non trouvé");
     }
-    
+
+    // Créer une notification pour le propriétaire du post
+    $postOwnerSql = $db->prepare("SELECT ID_USER FROM poste WHERE ID_POST = ?");
+    $postOwnerSql->execute([$postId]);
+    $postOwner = $postOwnerSql->fetch(PDO::FETCH_ASSOC);
+
+    if ($postOwner && $postOwner['ID_USER'] != $userId) {
+        // Vérifier si la table notifications existe
+        $checkTable = $db->query("SHOW TABLES LIKE 'notifications'");
+        if ($checkTable->rowCount() == 0) {
+            // Créer la table si elle n'existe pas
+            $createTableSQL = "
+                CREATE TABLE IF NOT EXISTS `notifications` (
+                  `ID_NOTIFICATION` int(11) NOT NULL AUTO_INCREMENT,
+                  `ID_USER_FROM` int(11) NOT NULL COMMENT 'Utilisateur qui fait l\'action',
+                  `ID_USER_TO` int(11) NOT NULL COMMENT 'Utilisateur qui reçoit la notification',
+                  `ID_POST` int(11) DEFAULT NULL COMMENT 'Post concerné (pour likes, commentaires)',
+                  `TYPE_NOTIFICATION` enum('like','comment','follow','mention') NOT NULL,
+                  `MESSAGE` text NOT NULL COMMENT 'Message de la notification',
+                  `IS_READ` tinyint(1) DEFAULT 0 COMMENT '0 = non lu, 1 = lu',
+                  `DATE_CREATED` timestamp NOT NULL DEFAULT current_timestamp(),
+                  PRIMARY KEY (`ID_NOTIFICATION`),
+                  KEY `FK_NOTIFICATION_USER_FROM` (`ID_USER_FROM`),
+                  KEY `FK_NOTIFICATION_USER_TO` (`ID_USER_TO`),
+                  KEY `FK_NOTIFICATION_POST` (`ID_POST`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+            ";
+            $db->exec($createTableSQL);
+        }
+
+        $message = "a commenté votre publication";
+        $notifSql = $db->prepare("
+            INSERT INTO notifications (ID_USER_FROM, ID_USER_TO, ID_POST, TYPE_NOTIFICATION, MESSAGE, DATE_CREATED)
+            VALUES (?, ?, ?, 'comment', ?, NOW())
+        ");
+        $result = $notifSql->execute([$userId, $postOwner['ID_USER'], $postId, $message]);
+
+        // Log pour debug
+        error_log("Notification commentaire créée: " . ($result ? "Succès" : "Échec") . " - User $userId commented on post $postId owned by " . $postOwner['ID_USER']);
+    }
+
     echo json_encode([
         "success" => true,
         "message" => "Commentaire ajouté avec succès",

@@ -2,10 +2,17 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import ChangePasswordModal from './ChangePasswordModal';
+import { useNotifications } from '../hooks/useNotifications';
 
 export default function Header({ onShowProfile, onShowFeed, onShowUserProfile, onSearch }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { notifications, loading: notificationsLoading, unreadCount, refreshNotifications, markNotificationsAsViewed } = useNotifications();
+
+  // Debug: afficher les notifications dans la console
+  React.useEffect(() => {
+    console.log('Notifications chargées:', notifications);
+  }, [notifications]);
 
   // Générer l'URL de l'image de profil
   const profileImageUrl = user?.IMG_PROFIL ? `http://localhost/localbook/backend/api/Uploads/users/${user.IMG_PROFIL}` : "https://via.placeholder.com/40";
@@ -35,14 +42,7 @@ export default function Header({ onShowProfile, onShowFeed, onShowUserProfile, o
     }
   };
 
-  // Données fictives pour les notifications
-  const notifications = [
-    { id: 1, user: 'Marie Dupont', avatar: 'https://via.placeholder.com/40', action: 'a aimé votre publication', time: 'il y a 5 min', read: false },
-    { id: 2, user: 'Thomas Martin', avatar: 'https://via.placeholder.com/40', action: 'a commenté votre photo', time: 'il y a 30 min', read: false },
-    { id: 3, user: 'Julie Lefebvre', avatar: 'https://via.placeholder.com/40', action: 'vous a identifié dans une publication', time: 'il y a 2h', read: true },
-    { id: 4, user: 'Pierre Moreau', avatar: 'https://via.placeholder.com/40', action: 'a partagé votre publication', time: 'il y a 1j', read: true },
-    { id: 5, user: 'Sophie Bernard', avatar: 'https://via.placeholder.com/40', action: 'a rejoint Localbook', time: 'il y a 2j', read: true }
-  ];
+
   
   // Données fictives pour les messages
   const messages = [
@@ -82,10 +82,16 @@ export default function Header({ onShowProfile, onShowFeed, onShowUserProfile, o
     ]
   };
   
-  const toggleNotifications = () => {
+  const toggleNotifications = async () => {
+    const wasOpen = showNotifications;
     setShowNotifications(!showNotifications);
     if (showMessages) setShowMessages(false);
     if (showUserMenu) setShowUserMenu(false);
+
+    // Si on ouvre les notifications et qu'il y a des notifications non vues, les marquer comme vues
+    if (!wasOpen && unreadCount > 0) {
+      await markNotificationsAsViewed();
+    }
   };
   
   const toggleMessages = () => {
@@ -192,10 +198,10 @@ export default function Header({ onShowProfile, onShowFeed, onShowUserProfile, o
                 <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"></path>
               </svg>
               
-              {/* Badge de notifications - gardé en rouge */}
-              {notifications.filter(n => !n.read).length > 0 && (
+              {/* Badge de notifications */}
+              {unreadCount > 0 && (
                 <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">
-                  {notifications.filter(n => !n.read).length}
+                  {unreadCount}
                 </span>
               )}
             </button>
@@ -205,30 +211,65 @@ export default function Header({ onShowProfile, onShowFeed, onShowUserProfile, o
               <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg overflow-hidden z-30">
                 <div className="p-3 border-b flex justify-between items-center">
                   <h3 className="font-bold text-lg">Notifications</h3>
-                  <button className="text-blue-600 text-sm font-medium">Tout marquer comme lu</button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={refreshNotifications}
+                      className="text-blue-600 text-sm font-medium hover:text-blue-800"
+                    >
+                      Actualiser
+                    </button>
+                    <button
+                      onClick={async () => {
+                        console.log('Test direct API...');
+                        try {
+                          const response = await fetch(`http://localhost/localbook/backend/api/notifications/get.php?user_id=${user?.ID_USER}`);
+                          const data = await response.json();
+                          console.log('Test API direct réussi:', data);
+                          alert('Test API: ' + JSON.stringify(data, null, 2));
+                        } catch (error) {
+                          console.error('Test API échoué:', error);
+                          alert('Erreur API: ' + error.message);
+                        }
+                      }}
+                      className="text-red-600 text-sm font-medium hover:text-red-800"
+                    >
+                      Test API
+                    </button>
+                  </div>
                 </div>
                 
                 <div className="max-h-96 overflow-y-auto">
-                  {notifications.length > 0 ? (
+                  {/* Debug info */}
+                  <div className="p-2 bg-yellow-100 text-xs">
+                    Debug: User ID: {user?.ID_USER}, Loading: {notificationsLoading ? 'Oui' : 'Non'}, Count: {notifications.length}
+                  </div>
+
+                  {notificationsLoading ? (
+                    <div className="p-4 text-center text-gray-500">
+                      Chargement des notifications...
+                    </div>
+                  ) : notifications.length > 0 ? (
                     <div>
                       {notifications.map(notification => (
-                        <div 
-                          key={notification.id} 
-                          className={`p-3 hover:bg-gray-50 cursor-pointer flex items-start ${!notification.read ? 'bg-blue-50' : ''}`}
+                        <div
+                          key={notification.id}
+                          className="p-3 hover:bg-gray-50 cursor-pointer flex items-start"
                         >
                           <div className="relative mr-3">
                             <div className="w-10 h-10 rounded-full overflow-hidden">
-                              <img src={notification.avatar} alt={notification.user} className="w-full h-full object-cover" />
+                              <img
+                                src={notification.avatar || "https://via.placeholder.com/40"}
+                                alt={notification.user || "Utilisateur"}
+                                className="w-full h-full object-cover"
+                                onError={(e) => e.target.src = "https://via.placeholder.com/40"}
+                              />
                             </div>
-                            {!notification.read && (
-                              <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-600 rounded-full border-2 border-white"></div>
-                            )}
                           </div>
                           <div className="flex-1">
                             <p className="text-sm">
-                              <span className="font-semibold">{notification.user}</span> {notification.action}
+                              <span className="font-semibold">{notification.user || "Utilisateur"}</span> {notification.action || "a effectué une action"}
                             </p>
-                            <p className="text-xs text-gray-500 mt-1">{notification.time}</p>
+                            <p className="text-xs text-gray-500 mt-1">{notification.time || "Récemment"}</p>
                           </div>
                         </div>
                       ))}
