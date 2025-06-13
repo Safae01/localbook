@@ -124,12 +124,13 @@ $hashed_password = password_hash($data['MDPS'], PASSWORD_DEFAULT);
 
 // Insert user
 try {
-    $sql = $db->prepare("INSERT INTO user (NOM, CIN_NUM, CIN_IMG, STATUT, EMAIL, MDPS, ID_ADMIN) VALUES (:nom, :cin, :cin_img, :statut, :email, :password, :id_admin)");
+    $sql = $db->prepare("INSERT INTO user (NOM, CIN_NUM, CIN_IMG, STATUT, TELE, EMAIL, MDPS, ID_ADMIN) VALUES (:nom, :cin, :cin_img, :statut, :tele, :email, :password, :id_admin)");
     $sql->execute([
         ":nom" => $data['NOM'],
         ":cin" => $data['CIN_NUM'],
         ":cin_img" => $cin_img,
         ":statut" => $data['STATUT'],
+        ":tele" => $data['TELE'],
         ":email" => $data['EMAIL'],
         ":password" => $hashed_password,
         ":id_admin" => 1
