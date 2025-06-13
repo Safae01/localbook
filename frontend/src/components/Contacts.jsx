@@ -1,18 +1,50 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import UserService from '../services/UserService';
 
 export default function Contacts() {
-  const contacts = [
-    { id: 1, name: 'Sophie Lefebvre', avatar: 'https://via.placeholder.com/40', status: 'online' },
-    { id: 2, name: 'Lucas Bernard', avatar: 'https://via.placeholder.com/40', status: 'online' },
-    { id: 3, name: 'Emma Petit', avatar: 'https://via.placeholder.com/40', status: 'offline' },
-    { id: 4, name: 'Hugo Dubois', avatar: 'https://via.placeholder.com/40', status: 'online' },
-    { id: 5, name: 'Léa Moreau', avatar: 'https://via.placeholder.com/40', status: 'offline' },
-    { id: 6, name: 'Gabriel Roux', avatar: 'https://via.placeholder.com/40', status: 'online' },
-  ];
-  
+  // États pour les contacts réels
+  const [contacts, setContacts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   const [activeChat, setActiveChat] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   
+  // Fonction pour charger tous les utilisateurs
+  const loadAllUsers = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await UserService.getAllUsers();
+      if (result.success) {
+        // Transformer les données pour correspondre au format attendu
+        const transformedUsers = result.users.map(user => ({
+          id: user.id,
+          name: user.name,
+          avatar: user.avatar || `https://via.placeholder.com/40?text=${user.name.charAt(0)}`,
+          status: user.isOnline,
+          email: user.email,
+          city: user.city,
+          userStatus: user.status
+        }));
+        setContacts(transformedUsers);
+      } else {
+        setError('Erreur lors du chargement des contacts');
+        console.error('Erreur lors du chargement des utilisateurs:', result.error);
+      }
+    } catch (error) {
+      setError('Erreur de connexion');
+      console.error('Erreur lors du chargement des utilisateurs:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Charger les utilisateurs au montage du composant
+  useEffect(() => {
+    loadAllUsers();
+  }, []);
+
   // Filtrer les contacts en fonction de la recherche
   const filteredContacts = contacts.filter(
     contact => contact.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -64,8 +96,30 @@ export default function Contacts() {
     <div className="w-1/5 p-4 bg-white shadow hidden lg:block overflow-y-auto h-screen sticky top-16">
       <div className="mb-4">
         <h2 className="text-gray-500 font-semibold mb-2 flex justify-between items-center">
-          <span>Contacts</span>
-          
+          <div className="flex flex-col">
+            <span>Contacts ({contacts.length})</span>
+            <span className="text-xs text-gray-400 font-normal">Propriétaires & Intermédiaires</span>
+          </div>
+          <button
+            onClick={loadAllUsers}
+            disabled={loading}
+            className="text-gray-400 hover:text-gray-600 disabled:opacity-50 transition-colors"
+            title="Actualiser les contacts"
+          >
+            <svg
+              className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+          </button>
         </h2>
         
         {/* Barre de recherche */}
@@ -84,27 +138,65 @@ export default function Contacts() {
       </div>
       
       <div className="space-y-2">
-        {filteredContacts.map(contact => (
-          <div 
-            key={contact.id} 
-            className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 cursor-pointer"
-            onClick={() => openChat(contact.id)}
-          >
-            <div className="relative">
-              <div className="w-10 h-10 rounded-full bg-gray-300 overflow-hidden">
-                <img src={contact.avatar} alt={contact.name} className="w-full h-full object-cover" />
-              </div>
-              {contact.status === 'online' && (
-                <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-green-500 border-2 border-white"></div>
-              )}
-            </div>
-            <span className="font-medium">{contact.name}</span>
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            <span className="ml-2 text-gray-600">Chargement des contacts...</span>
           </div>
-        ))}
-        {filteredContacts.length === 0 && (
+        ) : error ? (
+          <div className="text-center py-8">
+            <div className="text-red-500 mb-2">{error}</div>
+            <button
+              onClick={loadAllUsers}
+              className="text-blue-500 hover:text-blue-700 text-sm"
+            >
+              Réessayer
+            </button>
+          </div>
+        ) : filteredContacts.length === 0 ? (
           <div className="text-center py-3 text-gray-500">
-            Aucun contact trouvé
+            {searchTerm ? 'Aucun contact trouvé' : 'Aucun contact disponible'}
           </div>
+        ) : (
+          filteredContacts.map(contact => (
+            <div
+              key={contact.id}
+              className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+              onClick={() => openChat(contact.id)}
+              title={`${contact.name}${contact.city ? ` - ${contact.city}` : ''}${contact.userStatus ? ` (${contact.userStatus})` : ''}`}
+            >
+              <div className="relative">
+                <div className="w-10 h-10 rounded-full bg-gray-300 overflow-hidden border-2 border-gray-200">
+                  <img
+                    src={contact.avatar}
+                    alt={contact.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.src = `https://via.placeholder.com/40?text=${contact.name.charAt(0)}`;
+                    }}
+                  />
+                </div>
+                {contact.status === 'online' && (
+                  <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-green-500 border-2 border-white"></div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-medium text-sm truncate">{contact.name}</div>
+                {contact.city && (
+                  <div className="text-xs text-gray-500 truncate">{contact.city}</div>
+                )}
+                {contact.userStatus && (
+                  <div className="text-xs text-blue-600 truncate capitalize">{contact.userStatus}</div>
+                )}
+              </div>
+              <div className="flex flex-col items-end">
+                <span className={`inline-block w-2 h-2 rounded-full ${contact.status === 'online' ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+                <span className="text-xs text-gray-400 mt-1">
+                  {contact.status === 'online' ? 'En ligne' : 'Hors ligne'}
+                </span>
+              </div>
+            </div>
+          ))
         )}
       </div>
       

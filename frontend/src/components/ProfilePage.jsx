@@ -963,7 +963,7 @@ export default function ProfilePage() {
                       <option value="">Sélectionnez votre statut</option>
                       <option value="proprietaire">Propriétaire</option>
                       <option value="locataire">Locataire</option>
-                      <option value="intermadiaire">Intermédiaire</option>
+                      <option value="intermediaire">Intermédiaire</option>
                     </select>
                   </div>
                   
