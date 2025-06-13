@@ -79,8 +79,7 @@ try {
             ");
             $notifResult = $notifSql->execute([$data['user_id'], $postOwner['ID_USER'], $data['post_id'], $message]);
 
-            // Log pour debug
-            error_log("Notification enregistrement créée: " . ($notifResult ? "Succès" : "Échec") . " - User " . $data['user_id'] . " saved post " . $data['post_id'] . " owned by " . $postOwner['ID_USER']);
+
         }
 
         echo json_encode(["success" => true, "message" => "Post sauvegardé avec succès"]);

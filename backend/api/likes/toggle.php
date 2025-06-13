@@ -91,8 +91,7 @@ try {
                 ");
                 $result = $notifSql->execute([$userId, $postOwner['ID_USER'], $postId, $message]);
 
-                // Log pour debug (à supprimer plus tard)
-                error_log("Notification créée: " . ($result ? "Succès" : "Échec") . " - User $userId liked post $postId owned by " . $postOwner['ID_USER']);
+
             }
         }
     }

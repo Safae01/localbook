@@ -7,7 +7,7 @@ import { useNotifications } from '../hooks/useNotifications';
 export default function Header({ onShowProfile, onShowFeed, onShowUserProfile, onSearch }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { notifications, loading: notificationsLoading, unreadCount, refreshNotifications, markNotificationsAsViewed } = useNotifications();
+  const { notifications, loading: notificationsLoading, unreadCount, markNotificationsAsViewed } = useNotifications();
 
   // Debug: afficher les notifications dans la console
   React.useEffect(() => {
@@ -209,41 +209,11 @@ export default function Header({ onShowProfile, onShowFeed, onShowUserProfile, o
             {/* Menu déroulant des notifications */}
             {showNotifications && (
               <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg overflow-hidden z-30">
-                <div className="p-3 border-b flex justify-between items-center">
+                <div className="p-3 border-b">
                   <h3 className="font-bold text-lg">Notifications</h3>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={refreshNotifications}
-                      className="text-blue-600 text-sm font-medium hover:text-blue-800"
-                    >
-                      Actualiser
-                    </button>
-                    <button
-                      onClick={async () => {
-                        console.log('Test direct API...');
-                        try {
-                          const response = await fetch(`http://localhost/localbook/backend/api/notifications/get.php?user_id=${user?.ID_USER}`);
-                          const data = await response.json();
-                          console.log('Test API direct réussi:', data);
-                          alert('Test API: ' + JSON.stringify(data, null, 2));
-                        } catch (error) {
-                          console.error('Test API échoué:', error);
-                          alert('Erreur API: ' + error.message);
-                        }
-                      }}
-                      className="text-red-600 text-sm font-medium hover:text-red-800"
-                    >
-                      Test API
-                    </button>
-                  </div>
                 </div>
                 
                 <div className="max-h-96 overflow-y-auto">
-                  {/* Debug info */}
-                  <div className="p-2 bg-yellow-100 text-xs">
-                    Debug: User ID: {user?.ID_USER}, Loading: {notificationsLoading ? 'Oui' : 'Non'}, Count: {notifications.length}
-                  </div>
-
                   {notificationsLoading ? (
                     <div className="p-4 text-center text-gray-500">
                       Chargement des notifications...

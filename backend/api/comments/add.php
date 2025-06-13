@@ -129,8 +129,7 @@ try {
         ");
         $result = $notifSql->execute([$userId, $postOwner['ID_USER'], $postId, $message]);
 
-        // Log pour debug
-        error_log("Notification commentaire créée: " . ($result ? "Succès" : "Échec") . " - User $userId commented on post $postId owned by " . $postOwner['ID_USER']);
+
     }
 
     echo json_encode([

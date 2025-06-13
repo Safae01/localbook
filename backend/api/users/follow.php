@@ -105,8 +105,7 @@ try {
         ");
         $notifResult = $notifSql->execute([$follower_id, $followed_id, $message]);
 
-        // Log pour debug
-        error_log("Notification follow créée: " . ($notifResult ? "Succès" : "Échec") . " - User $follower_id followed user $followed_id");
+
 
         echo json_encode([
             'success' => true,
