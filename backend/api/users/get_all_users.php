@@ -21,9 +21,9 @@ try {
                 u.STATUT as status,
                 u.DATE_INSCRIPTION as join_date,
                 u.DATE_INSCRIPTION as last_active
-              FROM user u
-              WHERE u.STATUT IN ('proprietaire', 'intermediaire')
-              ORDER BY u.NOM ASC";
+                FROM user u
+                WHERE u.STATUT IN ('proprietaire', 'intermediaire')
+                ORDER BY u.NOM ASC";
 
     $stmt = $db->prepare($query);
     $stmt->execute();
