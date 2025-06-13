@@ -33,7 +33,8 @@ if (password_verify($data->MDPS, $user['MDPS'])) {
     echo json_encode(["success" => "Connexion réussie", "user" => [
         "ID_USER" => $user['ID_USER'],
         "NOM" => $user['NOM'],
-        "EMAIL" => $user['EMAIL']
+        "EMAIL" => $user['EMAIL'],
+        "IMG_PROFIL" => $user['IMG_PROFIL']
     ]]);
 } else {
     http_response_code(401);

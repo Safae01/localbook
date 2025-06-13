@@ -15,6 +15,7 @@ export const AuthProvider = ({ children }) => {
     if (savedUser) {
       try {
         const userData = JSON.parse(savedUser);
+        console.log('Utilisateur chargé depuis localStorage:', userData);
         setUser(userData);
         setIsAuthenticated(true);
       } catch (error) {

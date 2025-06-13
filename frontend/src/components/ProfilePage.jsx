@@ -1785,7 +1785,7 @@ export default function ProfilePage() {
                                   <div key={comment.ID_COMMENT} className="flex items-start space-x-2">
                                     <div className="w-8 h-8 rounded-full overflow-hidden">
                                       <img 
-                                        src={comment.IMG_PROFIL || "https://via.placeholder.com/40?text=User"} 
+                                        src={`http://localhost/localbook/backend/api/Uploads/users/${comment.AUTHOR_AVATAR}` || "https://via.placeholder.com/40?text=User"} 
                                         alt={comment.AUTHOR_NAME} 
                                         className="w-full h-full object-cover" 
                                       />
@@ -1806,7 +1806,7 @@ export default function ProfilePage() {
                           <div className="flex items-center space-x-2">
                             <div className="w-8 h-8 rounded-full overflow-hidden">
                               <img 
-                                src={user?.IMG_PROFIL || "https://via.placeholder.com/40?text=You"} 
+                                src={`http://localhost/localbook/backend/api/Uploads/users/${user.IMG_PROFIL}`|| "https://via.placeholder.com/40?text=You"} 
                                 alt="Vous" 
                                 className="w-full h-full object-cover" 
                               />
