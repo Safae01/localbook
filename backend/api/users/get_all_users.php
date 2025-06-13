@@ -19,6 +19,7 @@ try {
                 u.IMG_PROFIL as avatar,
                 u.VILLE as city,
                 u.STATUT as status,
+                u.TELE as phone,
                 u.DATE_INSCRIPTION as join_date,
                 u.DATE_INSCRIPTION as last_active
                 FROM user u
@@ -39,6 +40,7 @@ try {
             'email' => $row['email'],
             'city' => $row['city'],
             'status' => $row['status'],
+            'phone' => $row['phone'],
             'avatar' => $row['avatar'] ? "http://localhost/localbook/backend/api/Uploads/users/" . $row['avatar'] : null,
             'isOnline' => $isOnline ? 'online' : 'offline',
             'joinDate' => $row['join_date']

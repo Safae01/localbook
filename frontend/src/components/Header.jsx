@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import ChangePasswordModal from './ChangePasswordModal';
 import { useNotifications } from '../hooks/useNotifications';
 
-export default function Header({ onShowProfile, onShowFeed, onShowUserProfile, onSearch }) {
+export default function Header({ onShowProfile, onShowFeed, onSearch }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { notifications, loading: notificationsLoading, unreadCount, markNotificationsAsViewed } = useNotifications();
@@ -17,9 +17,7 @@ export default function Header({ onShowProfile, onShowFeed, onShowUserProfile, o
   // Générer l'URL de l'image de profil
   const profileImageUrl = user?.IMG_PROFIL ? `http://localhost/localbook/backend/api/Uploads/users/${user.IMG_PROFIL}` : "https://via.placeholder.com/40";
   const [showNotifications, setShowNotifications] = useState(false);
-  const [showMessages, setShowMessages] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [activeChat, setActiveChat] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
 
@@ -43,49 +41,11 @@ export default function Header({ onShowProfile, onShowFeed, onShowUserProfile, o
   };
 
 
-  
-  // Données fictives pour les messages
-  const messages = [
-    { id: 1, user: 'Marie Dupont', avatar: 'https://via.placeholder.com/40', message: 'Salut, comment ça va ?', time: 'il y a 10 min', read: false },
-    { id: 2, user: 'Thomas Martin', avatar: 'https://via.placeholder.com/40', message: 'Tu as vu la dernière photo ?', time: 'il y a 45 min', read: false },
-    { id: 3, user: 'Julie Lefebvre', avatar: 'https://via.placeholder.com/40', message: 'Merci pour l\'invitation !', time: 'il y a 3h', read: true },
-    { id: 4, user: 'Pierre Moreau', avatar: 'https://via.placeholder.com/40', message: 'On se retrouve où demain ?', time: 'il y a 1j', read: true },
-    { id: 5, user: 'Sophie Bernard', avatar: 'https://via.placeholder.com/40', message: 'Félicitations pour ton nouveau poste !', time: 'il y a 3j', read: true }
-  ];
-  
-  // Historique des conversations
-  const chatHistory = {
-    1: [
-      { id: 1, sender: 'Marie Dupont', text: 'Salut, comment ça va ?', time: '10:30', isUser: false },
-      { id: 2, sender: 'Vous', text: 'Ça va bien, merci ! Et toi ?', time: '10:32', isUser: true },
-      { id: 3, sender: 'Marie Dupont', text: 'Super ! Tu fais quoi ce weekend ?', time: '10:35', isUser: false }
-    ],
-    2: [
-      { id: 1, sender: 'Thomas Martin', text: 'Tu as vu la dernière photo ?', time: '09:15', isUser: false },
-      { id: 2, sender: 'Vous', text: 'Non, pas encore', time: '09:20', isUser: true },
-      { id: 3, sender: 'Thomas Martin', text: 'Je te l\'envoie tout de suite', time: '09:21', isUser: false }
-    ],
-    3: [
-      { id: 1, sender: 'Julie Lefebvre', text: 'Merci pour l\'invitation !', time: '14:45', isUser: false },
-      { id: 2, sender: 'Vous', text: 'Avec plaisir ! Tu viens ?', time: '15:00', isUser: true },
-      { id: 3, sender: 'Julie Lefebvre', text: 'Oui, bien sûr !', time: '15:05', isUser: false }
-    ],
-    4: [
-      { id: 1, sender: 'Pierre Moreau', text: 'On se retrouve où demain ?', time: '18:20', isUser: false },
-      { id: 2, sender: 'Vous', text: 'Au café habituel à 14h ?', time: '18:25', isUser: true },
-      { id: 3, sender: 'Pierre Moreau', text: 'Parfait, à demain !', time: '18:30', isUser: false }
-    ],
-    5: [
-      { id: 1, sender: 'Sophie Bernard', text: 'Félicitations pour ton nouveau poste !', time: '12:10', isUser: false },
-      { id: 2, sender: 'Vous', text: 'Merci beaucoup Sophie !', time: '12:15', isUser: true },
-      { id: 3, sender: 'Sophie Bernard', text: 'Il faut qu\'on fête ça !', time: '12:20', isUser: false }
-    ]
-  };
+
   
   const toggleNotifications = async () => {
     const wasOpen = showNotifications;
     setShowNotifications(!showNotifications);
-    if (showMessages) setShowMessages(false);
     if (showUserMenu) setShowUserMenu(false);
 
     // Si on ouvre les notifications et qu'il y a des notifications non vues, les marquer comme vues
@@ -93,52 +53,15 @@ export default function Header({ onShowProfile, onShowFeed, onShowUserProfile, o
       await markNotificationsAsViewed();
     }
   };
-  
-  const toggleMessages = () => {
-    setShowMessages(!showMessages);
-    if (showNotifications) setShowNotifications(false);
-    if (showUserMenu) setShowUserMenu(false);
-  };
 
   const toggleUserMenu = () => {
     setShowUserMenu(!showUserMenu);
     if (showNotifications) setShowNotifications(false);
-    if (showMessages) setShowMessages(false);
   };
 
   const handleLogout = () => {
     logout();
     navigate('/');
-  };
-  
-  const openChat = (messageId) => {
-    setActiveChat(messageId);
-    setShowMessages(false);
-  };
-  
-  const closeChat = () => {
-    setActiveChat(null);
-  };
-
-  const navigateToUserProfile = (user) => {
-    console.log("Navigating to user profile:", user);
-    
-    // Fermer le chat
-    closeChat();
-    
-    // Fermer les menus déroulants si ouverts
-    if (showMessages) setShowMessages(false);
-    if (showNotifications) setShowNotifications(false);
-    
-    // Si vous avez une prop pour naviguer vers le profil d'un utilisateur spécifique
-    if (props.onShowUserProfile) {
-      props.onShowUserProfile(user);
-    } else if (onShowUserProfile) {
-      onShowUserProfile(user);
-    } else {
-      // Fallback: utiliser la même fonction que pour le profil de l'utilisateur connecté
-      onShowProfile();
-    }
   };
 
   return (
@@ -254,67 +177,7 @@ export default function Header({ onShowProfile, onShowFeed, onShowUserProfile, o
             )}
           </div>
           
-          {/* Bouton de messages avec menu déroulant */}
-          <div className="relative">
-            <button 
-              className={`p-2 ${showMessages ? 'bg-blue-100 text-blue-600' : 'bg-gray-200 text-blue-600'} rounded-full relative`}
-              onClick={toggleMessages}
-            >
-              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z"></path>
-                <path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z"></path>
-              </svg>
-              
-              {/* Badge de messages - gardé en rouge */}
-              {messages.filter(m => !m.read).length > 0 && (
-                <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">
-                  {messages.filter(m => !m.read).length}
-                </span>
-              )}
-            </button>
-            
-            {/* Menu déroulant des messages */}
-            {showMessages && (
-              <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg overflow-hidden z-30">
-                <div className="p-3 border-b flex justify-between items-center">
-                  <h3 className="font-bold text-lg">Messages</h3>
-                  <button className="text-blue-600 text-sm font-medium">Tout marquer comme lu</button>
-                </div>
-                
-                <div className="max-h-96 overflow-y-auto">
-                  {messages.length > 0 ? (
-                    <div>
-                      {messages.map(message => (
-                        <div 
-                          key={message.id} 
-                          className={`p-3 hover:bg-gray-50 cursor-pointer flex items-start ${!message.read ? 'bg-blue-50' : ''}`}
-                          onClick={() => openChat(message.id)}
-                        >
-                          <div className="relative mr-3">
-                            <div className="w-10 h-10 rounded-full overflow-hidden">
-                              <img src={message.avatar} alt={message.user} className="w-full h-full object-cover" />
-                            </div>
-                            {!message.read && (
-                              <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-600 rounded-full border-2 border-white"></div>
-                            )}
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-semibold">{message.user}</p>
-                            <p className="text-xs text-gray-700 truncate">{message.message}</p>
-                            <p className="text-xs text-gray-500 mt-1">{message.time}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="p-4 text-center text-gray-500">
-                      Aucun message
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+
           
           {/* Menu utilisateur */}
           <div className="relative">
@@ -408,98 +271,7 @@ export default function Header({ onShowProfile, onShowFeed, onShowUserProfile, o
           onClose={() => setShowChangePasswordModal(false)}
         />
       )}
-      
-      {/* Fenêtre de chat */}
-      {activeChat && (
-        <div className="fixed bottom-0 right-64 w-80 bg-white rounded-t-lg shadow-lg z-10 overflow-hidden">
-          {/* En-tête du chat */}
-          <div className="p-3 bg-blue-600 text-white flex justify-between items-center">
-            <div 
-              className="flex items-center cursor-pointer" 
-              onClick={() => {
-                const chatUser = messages.find(m => m.id === activeChat);
-                if (chatUser) {
-                  navigateToUserProfile(chatUser);
-                }
-              }}
-            >
-              <div className="w-8 h-8 rounded-full overflow-hidden mr-2">
-                <img 
-                  src={messages.find(m => m.id === activeChat)?.avatar} 
-                  alt={messages.find(m => m.id === activeChat)?.user} 
-                  className="w-full h-full object-cover" 
-                />
-              </div>
-              <h3 className="font-medium hover:underline">
-                {messages.find(m => m.id === activeChat)?.user}
-              </h3>
-            </div>
-            <div className="flex space-x-2">
-              <button className="text-white hover:text-gray-200">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z"></path>
-                </svg>
-              </button>
-              <button className="text-white hover:text-gray-200" onClick={closeChat}>
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"></path>
-                </svg>
-              </button>
-            </div>
-          </div>
-          
-          {/* Corps du chat */}
-          <div className="h-80 overflow-y-auto p-3 bg-gray-50">
-            {chatHistory[activeChat]?.map(msg => (
-              <div 
-                key={msg.id} 
-                className={`mb-2 flex ${msg.isUser ? 'justify-end' : 'justify-start'}`}
-              >
-                {!msg.isUser && (
-                  <div className="w-8 h-8 rounded-full overflow-hidden mr-2 flex-shrink-0">
-                    <img 
-                      src={messages.find(m => m.id === activeChat)?.avatar} 
-                      alt={msg.sender} 
-                      className="w-full h-full object-cover" 
-                    />
-                  </div>
-                )}
-                <div 
-                  className={`max-w-xs px-3 py-2 rounded-lg ${
-                    msg.isUser 
-                      ? 'bg-blue-600 text-white rounded-br-none' 
-                      : 'bg-gray-200 text-gray-800 rounded-bl-none'
-                  }`}
-                >
-                  <p className="text-sm">{msg.text}</p>
-                  <p className="text-xs text-right mt-1 opacity-75">{msg.time}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-          
-          {/* Zone de saisie */}
-          <div className="p-3 border-t flex items-center">
-            <div className="flex-1 relative">
-              <input 
-                type="text" 
-                className="w-full px-4 py-2 rounded-full bg-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                placeholder="Écrivez un message..."
-              />
-              <button className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-blue-600">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 100-2 1 1 0 000 2zm7-1a1 1 0 11-2 0 1 1 0 012 0zm-.464 5.535a1 1 0 10-1.415-1.414 3 3 0 01-4.242 0 1 1 0 00-1.415 1.414 5 5 0 007.072 0z" clipRule="evenodd"></path>
-                </svg>
-              </button>
-            </div>
-            <button className="ml-2 p-2 rounded-full bg-blue-600 text-white">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path>
-              </svg>
-            </button>
-          </div>
-        </div>
-      )}
+
     </>
   );
 }
