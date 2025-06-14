@@ -336,7 +336,7 @@ export default function Auth() {
                       >
                         <option value="">Sélectionnez votre statut</option>
                         <option value="proprietaire">Propriétaire</option>
-                        <option value="client">client</option>
+                        <option value="locataire">locataire</option>
                         <option value="intermediaire">intermédiaire</option>
                         
                       </select>
