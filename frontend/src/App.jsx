@@ -3,7 +3,6 @@ import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import Feed from './components/Feed';
 import Contacts from './components/Contacts';
-import FollowersList from './components/FollowersList';
 import FollowingList from './components/FollowingList';
 import VideoFeed from './components/VideoFeed';
 import SavedPosts from './components/SavedPosts';

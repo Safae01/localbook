@@ -152,31 +152,30 @@ export default function Auth() {
               <div className="border rounded-lg p-3 mb-3 shadow-sm">
                 <div className="flex items-center space-x-2 mb-2">
                   <div className="w-8 h-8 rounded-full bg-gray-300 overflow-hidden">
-                    <img src="https://via.placeholder.com/40" alt="Profile" className="w-full h-full object-cover" />
+                    <img src="http://localhost/localbook/backend/api/Uploads/users/684b4af677c51_WhatsApp Image 2024-04-15 à 02.57.52_7d11936d.jpg" alt="Profile" className="w-full h-full object-cover" />
                   </div>
                   <div>
-                    <p className="font-medium text-sm">Marie Dupont</p>
+                    <p className="font-medium text-sm">hamid slaoui</p>
                     <p className="text-xs text-gray-500">il y a 2h</p>
                   </div>
                 </div>
                 <div className="mb-2 py-2 border-y border-gray-100">
                   <div className="flex flex-wrap gap-2">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Location</span>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">1200€/mois</span>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">chambre</span>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">tanger/birchifa</span>
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">75m²</span>
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">3 pièces</span>
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">Meublé</span>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">Paris</span>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">250dh/nuit</span>
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-pink-100 text-pink-800">Wifi</span>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800">Parking</span>
                   </div>
                 </div>
-                <p className="text-sm mb-2">Bonjour à tous ! Voici une photo de mon dernier voyage.</p>
+                <p className="text-sm mb-2">recherche pour des locataires de familles</p>
                 <div className="rounded-lg overflow-hidden h-32 bg-gray-200">
-                  <img src="https://via.placeholder.com/600x400" alt="Post" className="w-full h-full object-cover" />
+                  <img src="http://localhost/localbook/backend/api/Uploads/posts/684b462e08cae_salon-Maroua-Ihrai2.jpg" alt="Post" className="w-full h-full object-cover" />
                 </div>
                 <div className="flex justify-between mt-2 text-xs text-gray-500">
-                  <span>12 j'aime</span>
+                  <span>120 j'aime</span>
                   <span>3 commentaires</span>
                 </div>
               </div>
@@ -185,7 +184,7 @@ export default function Auth() {
               <div className="border rounded-lg p-3 mb-3 shadow-sm">
                 <div className="flex items-center space-x-2 mb-2">
                   <div className="w-8 h-8 rounded-full bg-gray-300 overflow-hidden">
-                    <img src="https://via.placeholder.com/40?text=A" alt="Profile" className="w-full h-full object-cover" />
+                    <img src="http://localhost/localbook/backend/api/Uploads/users/684b4b1971e84_téléchargement.jpg" alt="Profile" className="w-full h-full object-cover" />
                   </div>
                   <div>
                     <p className="font-medium text-sm">Ahmed Benali</p>
@@ -204,7 +203,7 @@ export default function Auth() {
                 </div>
                 <p className="text-sm mb-2">Magnifique appartement avec vue sur mer, proche de toutes commodités.</p>
                 <div className="rounded-lg overflow-hidden h-32 bg-gray-200">
-                  <img src="https://via.placeholder.com/600x400?text=Appartement" alt="Post" className="w-full h-full object-cover" />
+                  <img src="http://localhost/localbook/backend/api/Uploads/posts/684b462e09170_images.jpg" alt="Post" className="w-full h-full object-cover" />
                 </div>
                 <div className="flex justify-between mt-2 text-xs text-gray-500">
                   <span>8 j'aime</span>
@@ -216,7 +215,7 @@ export default function Auth() {
               <div className="border rounded-lg p-3 mb-3 shadow-sm">
                 <div className="flex items-center space-x-2 mb-2">
                   <div className="w-8 h-8 rounded-full bg-gray-300 overflow-hidden">
-                    <img src="https://via.placeholder.com/40?text=S" alt="Profile" className="w-full h-full object-cover" />
+                    <img src="http://localhost/localbook/backend/api/Uploads/users/684c88d7b25a5_549d374_2015-05-24T140743Z_01_TOR903_RTRIDSP_3_PEOPLE-NASH.jpg" alt="Profile" className="w-full h-full object-cover" />
                   </div>
                   <div>
                     <p className="font-medium text-sm">Sarah Martin</p>
@@ -235,7 +234,7 @@ export default function Auth() {
                 </div>
                 <p className="text-sm mb-2">Chambre dans colocation sympa, ambiance étudiante garantie !</p>
                 <div className="rounded-lg overflow-hidden h-32 bg-gray-200">
-                  <img src="https://via.placeholder.com/600x400?text=Chambre" alt="Post" className="w-full h-full object-cover" />
+                  <img src="http://localhost/localbook/backend/api/Uploads/posts/684b533443bc6_salon-Maroua-Ihrai2.jpg" alt="Post" className="w-full h-full object-cover" />
                 </div>
                 <div className="flex justify-between mt-2 text-xs text-gray-500">
                   <span>15 j'aime</span>
@@ -247,7 +246,7 @@ export default function Auth() {
               <div className="border rounded-lg p-3 mb-3 shadow-sm">
                 <div className="flex items-center space-x-2 mb-2">
                   <div className="w-8 h-8 rounded-full bg-gray-300 overflow-hidden">
-                    <img src="https://via.placeholder.com/40?text=K" alt="Profile" className="w-full h-full object-cover" />
+                    <img src="http://localhost/localbook/backend/api/Uploads/users/6841efae7f295_1600w-VwJMC37j5jQ.webp" alt="Profile" className="w-full h-full object-cover" />
                   </div>
                   <div>
                     <p className="font-medium text-sm">Karim Alaoui</p>
@@ -266,7 +265,7 @@ export default function Auth() {
                 </div>
                 <p className="text-sm mb-2">Villa spacieuse avec jardin, parfaite pour une famille.</p>
                 <div className="rounded-lg overflow-hidden h-32 bg-gray-200">
-                  <img src="https://via.placeholder.com/600x400?text=Villa" alt="Post" className="w-full h-full object-cover" />
+                  <img src="http://localhost/localbook/backend/api/Uploads/posts/6841cb3c6df93_5183000.jpg" alt="Post" className="w-full h-full object-cover" />
                 </div>
                 <div className="flex justify-between mt-2 text-xs text-gray-500">
                   <span>20 j'aime</span>
