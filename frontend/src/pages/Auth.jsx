@@ -335,9 +335,9 @@ export default function Auth() {
                         required
                       >
                         <option value="">Sélectionnez votre statut</option>
-                        <option value="Étudiant">Propriétaire</option>
-                        <option value="Employé">client</option>
-                        <option value="Entrepreneur">intermédiaire</option>
+                        <option value="proprietaire">Propriétaire</option>
+                        <option value="client">client</option>
+                        <option value="intermediaire">intermédiaire</option>
                         
                       </select>
                       {validationErrors.STATUT && (
