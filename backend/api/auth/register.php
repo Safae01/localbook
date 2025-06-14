@@ -1,6 +1,6 @@
 <?php
 // Suppress any unexpected output
-ob_start();
+ob_start(); //tout ce que echo ecrit va ds ce tampon
 require_once "../config/database.php";
 require_once "../config/cors.php";
 
