@@ -32,6 +32,7 @@ export default function ProfilePage() {
   const [rawVideo, setRawVideo] = useState(null);
   const [userAnnonces, setUserAnnonces] = useState([]);
   const [loadingAnnonces, setLoadingAnnonces] = useState(false);
+  const [description, setDescription] = useState('');
 
   // États pour les followers et following réels
   const [realFollowers, setRealFollowers] = useState([]);
@@ -66,7 +67,7 @@ export default function ProfilePage() {
     cinImage: user && user.CIN_IMG ? EditProfileService.getCinImageUrl(user.CIN_IMG) : null,
     cinNumber: user ? user.CIN_NUM : "",
     bio: "",
-    joinDate: "Membre depuis 2024",
+    joinDate: user && user.DATE_INSCRIPTION ? `Membre depuis ${new Date(user.DATE_INSCRIPTION).getFullYear()}` : "Membre depuis Longtemps",
     stats: {
       posts: 0,
       followers: 0,
@@ -161,6 +162,7 @@ export default function ProfilePage() {
           phone: result.user.TELE || "",
           birthday: result.user.DATE_NAISSANCE || "",
           cinNumber: result.user.CIN_NUM || "",
+          joinDate: result.user.DATE_INSCRIPTION ? `Membre depuis ${new Date(result.user.DATE_INSCRIPTION).getFullYear()}` : "Membre depuis 2024",
           avatar: result.user.IMG_PROFIL ? EditProfileService.getProfileImageUrl(result.user.IMG_PROFIL) : prev.avatar,
           coverPhoto: result.user.IMG_COUVERT ? EditProfileService.getCoverImageUrl(result.user.IMG_COUVERT) : prev.coverPhoto,
           cinImage: result.user.CIN_IMG ? EditProfileService.getCinImageUrl(result.user.CIN_IMG) : null
@@ -527,7 +529,7 @@ export default function ProfilePage() {
         SURFACE: area,
         NBRE_PIECE: rooms,
         ETAT: furnishingStatus === 'equipped' ? 'meuble' : 'non_meuble',
-        DESCRIPTION: "",
+        DESCRIPTION: description,
         equipements: amenities
       };
 
@@ -1143,7 +1145,21 @@ export default function ProfilePage() {
                     <div className="text-sm text-blue-600">Compte vérifié</div>
                   </div>
                 </div>
-                
+
+                {/* Description */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">Description</label>
+                  <textarea
+                    name="description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 transition-colors hover:border-blue-300"
+                    placeholder="Décrivez votre bien immobilier..."
+                    required
+                    rows="3"
+                  ></textarea>
+                </div>
+
                 {/* Type de bien */}
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">Type de bien</label>
@@ -1358,7 +1374,7 @@ export default function ProfilePage() {
                     </label>
                   </div>
                 </div>
-                
+
                 {/* Images */}
                 <div className="space-y-3">
                   <label className="block text-sm font-medium text-gray-700">Images</label>
@@ -1732,6 +1748,13 @@ export default function ProfilePage() {
                             ))}
                           </div>
                         </div>
+
+                        {/* Description */}
+                        {annonce.DESCRIPTION && (
+                          <div className="mt-3 mb-3 px-4">
+                            <p className="text-gray-700 text-sm leading-relaxed">{annonce.DESCRIPTION}</p>
+                          </div>
+                        )}
                       </div>
 
                       {/* Images et vidéos avec nouveau layout */}

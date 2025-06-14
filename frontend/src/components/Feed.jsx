@@ -755,391 +755,7 @@ export default function Feed({ searchQuery }) {
         </div>
       </div>
 
-      {/* Post Form Modal - Exactement comme dans ProfilePage */}
-      {showPostForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl max-h-[80vh] overflow-y-auto">
-            {/* En-tête */}
-            <div className="p-5 border-b border-gray-200 sticky top-0 bg-white z-10">
-              <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-gray-800">Créer une annonce immobilière</h2>
-                <button 
-                  className="text-gray-500 hover:text-gray-700 transition-colors rounded-full p-1 hover:bg-gray-100"
-                  onClick={() => setShowPostForm(false)}
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-            
-            <form onSubmit={handleSubmit} className="p-6">
-              {/* Contenu du formulaire */}
-              <div className="space-y-6 mb-8">
-                {/* Bloc utilisateur */}
-                <div className="flex items-center space-x-3 bg-blue-50 p-4 rounded-xl border border-blue-100">
-                  <div className="w-12 h-12 rounded-full bg-gray-300 overflow-hidden border-2 border-blue-300">
-                    <img src={userProfile.avatar} alt="Profile" className="w-full h-full object-cover" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-gray-800 flex items-center">
-                      {userProfile.name}
-                      <svg className="w-5 h-5 text-blue-500 ml-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path>
-                      </svg>
-                    </div>
-                    <div className="text-sm text-blue-600">Compte vérifié</div>
-                  </div>
-                </div>
-                
-                {/* Ajout du champ description après le bloc utilisateur */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Description</label>
-                  <textarea
-                    name="description"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 transition-colors hover:border-blue-300"
-                    placeholder="Décrivez votre bien immobilier..."
-                    required
-                  ></textarea>
-                </div>
-                
-                {/* Type de bien */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Type de bien</label>
-                  <div className="relative">
-                    <select 
-                      className="w-full pl-3 pr-10 py-3 border border-gray-300 bg-white rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 appearance-none transition-colors hover:border-blue-300"
-                      value={postType}
-                      onChange={(e) => setPostType(e.target.value)}
-                      required
-                    >
-                      <option value="">Sélectionnez un type</option>
-                      <option value="location">Location</option>
-                      <option value="vente">Vente</option>
-                      <option value="colocation">Colocation</option>
-                      <option value="recherche">Recherche</option>
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd"></path>
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Localisation */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Localisation (ville)</label>
-                  <input 
-                    type="text" 
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 transition-colors hover:border-blue-300"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    placeholder="Ex: Paris, Tanger"
-                    required
-                  />
-                </div>
-                
-                {/* Quartier */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Quartier</label>
-                  <input
-                    type="text"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 transition-colors hover:border-blue-300"
-                    value={quartier}
-                    onChange={(e) => setQuartier(e.target.value)}
-                    placeholder="Ex: Bastille, Birchifa"
-                    required
-                  />
-                </div>
-                
-                {/* Durée */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Type de location</label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <label className={`relative flex items-center p-3 rounded-xl border ${durationType === 'courte' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'} cursor-pointer hover:border-blue-300 transition-colors`}>
-                      <input 
-                        type="radio" 
-                        name="durationType" 
-                        value="courte" 
-                        checked={durationType === 'courte'}
-                        onChange={() => setDurationType('courte')}
-                        className="h-5 w-5 text-blue-600 border-gray-300 focus:ring-blue-500"
-                      />
-                      <span className="ml-3 text-gray-700">nuit</span>
-                    </label>
-                    <label className={`relative flex items-center p-3 rounded-xl border ${durationType === 'longue' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'} cursor-pointer hover:border-blue-300 transition-colors`}>
-                      <input 
-                        type="radio" co
-                        name="durationType" 
-                        value="longue" 
-                        checked={durationType === 'longue'}
-                        onChange={() => setDurationType('longue')}
-                        className="h-5 w-5 text-blue-600 border-gray-300 focus:ring-blue-500"
-                      />
-                      <span className="ml-3 text-gray-700">mois</span>
-                    </label>
-                  </div>
-                </div>
-                
-                {/* Prix */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Prix (€/mois)</label>
-                  <input 
-                    type="number" 
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 transition-colors hover:border-blue-300"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    placeholder="Ex: 800"
-                    required
-                  />
-                </div>
-                
-                {/* Surface */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Surface (m²)</label>
-                  <input 
-                    type="number" 
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 transition-colors hover:border-blue-300"
-                    value={area}
-                    onChange={(e) => setArea(e.target.value)}
-                    placeholder="Ex: 45"
-                    required
-                  />
-                </div>
-                
-                {/* Nombre de pièces */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Nombre de pièces</label>
-                  <input 
-                    type="number" 
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 transition-colors hover:border-blue-300"
-                    value={rooms}
-                    onChange={(e) => setRooms(e.target.value)}
-                    placeholder="Ex: 3"
-                    required
-                  />
-                </div>
-                
-                {/* Équipé ou non */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">État du bien</label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <label className={`relative flex items-center p-4 rounded-xl border ${furnishingStatus === 'equipped' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'} cursor-pointer hover:border-blue-300 transition-colors`}>
-                      <input 
-                        type="radio" 
-                        name="furnishingStatus" 
-                        value="equipped" 
-                        checked={furnishingStatus === 'equipped'}
-                        onChange={() => setFurnishingStatus('equipped')}
-                        className="h-5 w-5 text-blue-600 border-gray-300 focus:ring-blue-500"
-                        required
-                      />
-                      <div className="ml-3">
-                        <span className="block text-sm font-medium text-gray-700">Équipé/Meublé</span>
-                        <span className="block text-xs text-gray-500">Prêt à emménager</span>
-                      </div>
-                    </label>
-                    <label className={`relative flex items-center p-4 rounded-xl border ${furnishingStatus === 'notEquipped' ? 'border-blue-500 bg-blue-50' : 'border-gray-300'} cursor-pointer hover:border-blue-300 transition-colors`}>
-                      <input 
-                        type="radio" 
-                        name="furnishingStatus" 
-                        value="notEquipped" 
-                        checked={furnishingStatus === 'notEquipped'}
-                        onChange={() => setFurnishingStatus('notEquipped')}
-                        className="h-5 w-5 text-blue-600 border-gray-300 focus:ring-blue-500"
-                      />
-                      <div className="ml-3">
-                        <span className="block text-sm font-medium text-gray-700">Non équipé/Non meublé</span>
-                        <span className="block text-xs text-gray-500">À aménager</span>
-                      </div>
-                    </label>
-                  </div>
-                </div>
-                
-                {/* Équipements */}
-                <div className="space-y-3">
-                  <label className="block text-sm font-medium text-gray-700">Équipements</label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <label className={`flex items-center space-x-2 ${amenities.includes('wifi') ? 'text-blue-600' : 'text-gray-600'}`}>
-                      <input 
-                        type="checkbox" 
-                        className="h-5 w-5 text-blue-600 border-gray-300 focus:ring-blue-500"
-                        checked={amenities.includes('wifi')}
-                        onChange={() => handleAmenityToggle('wifi')}
-                      />
-                      <span>Wi-Fi</span>
-                    </label>
-                    <label className={`flex items-center space-x-2 ${amenities.includes('parking') ? 'text-blue-600' : 'text-gray-600'}`}>
-                      <input 
-                        type="checkbox" 
-                        className="h-5 w-5 text-blue-600 border-gray-300 focus:ring-blue-500"
-                        checked={amenities.includes('parking')}
-                        onChange={() => handleAmenityToggle('parking')}
-                      />
-                      <span>Parking</span>
-                    </label>
-                    <label className={`flex items-center space-x-2 ${amenities.includes('garage') ? 'text-blue-600' : 'text-gray-600'}`}>
-                      <input 
-                        type="checkbox" 
-                        className="h-5 w-5 text-blue-600 border-gray-300 focus:ring-blue-500"
-                        checked={amenities.includes('garage')}
-                        onChange={() => handleAmenityToggle('garage')}
-                      />
-                      <span>Garage</span>
-                    </label>
-                    <label className={`flex items-center space-x-2 ${amenities.includes('terrasse') ? 'text-blue-600' : 'text-gray-600'}`}>
-                      <input 
-                        type="checkbox" 
-                        className="h-5 w-5 text-blue-600 border-gray-300 focus:ring-blue-500"
-                        checked={amenities.includes('terrasse')}
-                        onChange={() => handleAmenityToggle('terrasse')}
-                      />
-                      <span>Terrasse</span>
-                    </label>
-                    <label className={`flex items-center space-x-2 ${amenities.includes('ascenseur') ? 'text-blue-600' : 'text-gray-600'}`}>
-                      <input 
-                        type="checkbox" 
-                        className="h-5 w-5 text-blue-600 border-gray-300 focus:ring-blue-500"
-                        checked={amenities.includes('ascenseur')}
-                        onChange={() => handleAmenityToggle('ascenseur')}
-                      />
-                      <span>Ascenseur</span>
-                    </label>
-                    <label className={`flex items-center space-x-2 ${amenities.includes('salleDeSport') ? 'text-blue-600' : 'text-gray-600'}`}>
-                      <input 
-                        type="checkbox" 
-                        className="h-5 w-5 text-blue-600 border-gray-300 focus:ring-blue-500"
-                        checked={amenities.includes('salleDeSport')}
-                        onChange={() => handleAmenityToggle('salleDeSport')}
-                      />
-                      <span>Salle de sport</span>
-                    </label>
-                  </div>
-                </div>
-                
-                {/* Images */}
-                <div className="space-y-3">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Images <span className="text-red-500">*</span>
-                    <span className="text-xs text-gray-500 font-normal">(Au moins une image ou une vidéo requise)</span>
-                  </label>
-                  {images.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-2 justify-center -mt-1 pb-4">
-                      {images.map((img, index) => (
-                        <div key={index} className="relative w-20 h-20">
-                          <img src={img} alt="" className="w-full h-full object-cover rounded-lg" />
-                          <button
-                            type="button"
-                            className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center"
-                            onClick={() => {
-                              setImages(images.filter((_, i) => i !== index));
-                              setImageFiles(imageFiles.filter((_, i) => i !== index));
-                            }}
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-xl hover:border-blue-400 transition-colors">
-                    <div className="space-y-1 text-center">
-                      <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
-                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                      <div className="flex text-sm text-gray-600">
-                        <label htmlFor="file-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none">
-                          <span>Télécharger des fichiers</span>
-                          <input 
-                            id="file-upload" 
-                            name="file-upload" 
-                            type="file" 
-                            className="sr-only" 
-                            multiple
-                            onChange={handleImageUpload}
-                            accept="image/*"
-                          />
-                        </label>
-                        <p className="pl-1">ou glisser-déposer</p>
-                      </div>
-                      <p className="text-xs text-gray-500">PNG, JPG, GIF, WebP jusqu'à 15MB</p>
-                    </div>
-                  </div>
-                  {errors.images && (
-                    <p className="text-red-500 text-sm mt-1 font-bold border border-red-300 p-2 bg-red-50 rounded">
-                      ❌ {errors.images}
-                    </p>
-                  )}
-                </div>
-                
-                {/* Vidéo */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Vidéo <span className="text-red-500">*</span>
-                    <span className="text-xs text-gray-500 font-normal">(Ou au moins une image requise)</span>
-                  </label>
-                  <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed hover:border-blue-400 rounded-md">
-                    <div className="space-y-1 text-center">
-                      <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                      </svg>
-                      <div className="flex text-sm text-gray-600">
-                        <label htmlFor="video-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none">
-                          <span>Télécharger une vidéo</span>
-                          <input id="video-upload" name="video-upload" type="file" className="sr-only" accept="video/*" onChange={handleVideoUpload} />
-                        </label>
-                        <p className="pl-1">ou glisser-déposer</p>
-                      </div>
-                      <p className="text-xs text-gray-500">MP4, MOV jusqu'à 100MB</p>
-                    </div>
-                  </div>
-                  {video && (
-                    <div className="mt-2 flex justify-center -mt-1 pb-4">
-                      <div className="relative w-full max-w-md">
-                        <video src={video} controls className="w-full h-48 object-cover rounded"></video>
-                        <button
-                          type="button"
-                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
-                          onClick={() => {
-                            setVideo(null);
-                            setVideoFile(null);
-                          }}
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                  {errors.video && (
-                    <p className="text-red-500 text-sm mt-1 font-bold border border-red-300 p-2 bg-red-50 rounded">
-                      ❌ {errors.video}
-                    </p>
-                  )}
-                </div>
-              </div>
-              
-              {/* Bouton de soumission */}
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  className="w-full py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                  onClick={() => {
-                    console.log('BOUTON CLIQUÉ - Images:', imageFiles.length, 'Vidéo:', videoFile ? 'Oui' : 'Non');
-                  }}
-                >
-                  Publier (Images: {imageFiles.length}, Vidéo: {videoFile ? '✓' : '✗'})
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+
 
       {/* Posts avec le même format que SavedPosts */}
       <div className="space-y-6">
@@ -1206,7 +822,7 @@ export default function Feed({ searchQuery }) {
                   <div className="text-xs text-gray-500">{post.time}</div>
                 </div>
               </div>
-              
+
               {post.details && (
                 <div className="mt-3 mb-3 py-2 border-y border-gray-100">
                   <div className="flex flex-wrap gap-2">
@@ -1260,8 +876,15 @@ export default function Feed({ searchQuery }) {
                   </div>
                 </div>
               )}
+
+              {/* Description */}
+              {post.content && (
+                <div className="mt-3 mb-3 px-4">
+                  <p className="text-gray-700 text-sm leading-relaxed">{post.content}</p>
+                </div>
+              )}
             </div>
-            
+
             {/* Images et vidéos */}
             <div className="px-3"> {/* Padding horizontal uniquement */}
               {/* Images en haut */}
@@ -1686,7 +1309,18 @@ export default function Feed({ searchQuery }) {
                     </label>
                   </div>
                 </div>
-                
+                {/* Description */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">Description</label>
+                  <textarea
+                    name="description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 transition-colors hover:border-blue-300"
+                    placeholder="Décrivez votre bien immobilier..."
+                    required
+                  ></textarea>
+                </div>
                 {/* Images */}
                 <div className="space-y-3">
                   <label className="block text-sm font-medium text-gray-700">
