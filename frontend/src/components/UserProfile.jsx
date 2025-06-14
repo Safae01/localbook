@@ -809,8 +809,8 @@ export default function UserProfile({ user, onBack }) {
                             <div key={comment.ID_COMMENT} className="flex items-start space-x-2 mb-2">
                               <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
                                 <img 
-                                  src={comment.AUTHOR_AVATAR || "https://via.placeholder.com/40?text=User"} 
-                                  alt={comment.AUTHOR_NAME} 
+                            src={comment.AUTHOR_AVATAR ? `http://localhost/localbook/backend/api/Uploads/users/${comment.AUTHOR_AVATAR}` : "https://via.placeholder.com/40"}
+                            alt={comment.AUTHOR_NAME} 
                                   className="w-full h-full object-cover" 
                                 />
                               </div>
@@ -848,7 +848,9 @@ export default function UserProfile({ user, onBack }) {
                       <div className="flex items-center space-x-2 mt-3">
                         <div className="w-8 h-8 rounded-full overflow-hidden">
                           <img 
-                            src={currentUser?.IMG_PROFIL || "https://via.placeholder.com/40?text=You"} 
+                          
+
+                            src={currentUser?.IMG_PROFIL ? `http://localhost/localbook/backend/api/Uploads/users/${currentUser.IMG_PROFIL}` : "https://via.placeholder.com/40"} 
                             alt="Vous" 
                             className="w-full h-full object-cover" 
                             onError={(e) => e.target.src = "https://via.placeholder.com/40?text=You"}
