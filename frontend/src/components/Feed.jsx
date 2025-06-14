@@ -235,6 +235,7 @@ export default function Feed({ searchQuery }) {
       if (result.success) {
         const transformedStories = result.stories.map(story => ({
           id: story.ID_STORY,
+          userId: story.ID_USER,
           author: story.AUTHOR_NAME || "Utilisateur",
           avatar: story.AUTHOR_AVATAR ? `http://localhost/localbook/backend/api/Uploads/users/${story.AUTHOR_AVATAR}` : "https://via.placeholder.com/40",
           image: StoryService.getStoryUrl(story.CONTENT),
@@ -463,6 +464,14 @@ export default function Feed({ searchQuery }) {
     setShowStoryViewer(true);
   };
 
+  // Fonction pour gérer le clic sur l'utilisateur dans les stories
+  const handleStoryUserClick = (story) => {
+    // Fermer le story viewer
+    setShowStoryViewer(false);
+    // Afficher le profil utilisateur
+    showUserProfile(story.userId, story.author, story.avatar);
+  };
+
   // Ajoutez cette fonction pour gérer l'upload de story
   const handleStoryUpload = async (e) => {
     if (!user) {
@@ -479,6 +488,7 @@ export default function Feed({ searchQuery }) {
             // Ajouter directement la nouvelle story à la liste et actualiser
             const newStory = {
                 id: result.story.ID_STORY,
+                userId: result.story.ID_USER || user.ID_USER,
                 author: result.story.AUTHOR_NAME || user.NOM,
                 avatar: result.story.AUTHOR_AVATAR ? `http://localhost/localbook/backend/api/Uploads/users/${result.story.AUTHOR_AVATAR}` : profileImageUrl,
                 image: StoryService.getStoryUrl(result.story.CONTENT),
@@ -1442,6 +1452,7 @@ export default function Feed({ searchQuery }) {
           stories={stories}
           initialIndex={currentStoryIndex}
           onClose={() => setShowStoryViewer(false)}
+          onUserClick={handleStoryUserClick}
         />
       )}
 

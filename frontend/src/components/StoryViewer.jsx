@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-export default function StoryViewer({ stories, initialIndex, onClose }) {
+export default function StoryViewer({ stories, initialIndex, onClose, onUserClick }) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex || 0);
   const [progress, setProgress] = useState(0);
   const progressInterval = useRef(null);
@@ -84,14 +84,22 @@ export default function StoryViewer({ stories, initialIndex, onClose }) {
         
         {/* Info utilisateur */}
         <div className="absolute top-12 left-0 right-0 p-4 flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-full border-2 border-blue-500 overflow-hidden">
-            <img 
-              src={stories[currentIndex]?.avatar || `https://via.placeholder.com/40?text=U${currentIndex + 1}`} 
-              alt={`User ${currentIndex + 1}`} 
-              className="w-full h-full object-cover" 
+          <div
+            className="w-10 h-10 rounded-full border-2 border-blue-500 overflow-hidden cursor-pointer hover:border-white transition-colors"
+            onClick={() => onUserClick && onUserClick(stories[currentIndex])}
+          >
+            <img
+              src={stories[currentIndex]?.avatar || `https://via.placeholder.com/40?text=U${currentIndex + 1}`}
+              alt={`User ${currentIndex + 1}`}
+              className="w-full h-full object-cover"
             />
           </div>
-          <span className="text-white font-medium">{stories[currentIndex]?.author || `Utilisateur ${currentIndex + 1}`}</span>
+          <span
+            className="text-white font-medium cursor-pointer hover:text-blue-300 transition-colors"
+            onClick={() => onUserClick && onUserClick(stories[currentIndex])}
+          >
+            {stories[currentIndex]?.author || `Utilisateur ${currentIndex + 1}`}
+          </span>
         </div>
         
         {/* Flèches de navigation visibles */}
