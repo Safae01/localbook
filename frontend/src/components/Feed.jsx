@@ -42,6 +42,8 @@ export default function Feed({ searchQuery }) {
   const [storyPreview, setStoryPreview] = useState(null); // Nouvel état pour l'aperçu de story
   const [stories, setStories] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [commentToDelete, setCommentToDelete] = useState(null);
+  const [showDeleteCommentModal, setShowDeleteCommentModal] = useState(false);
 
   // Données des posts - chargées depuis l'API
   const [posts, setPosts] = useState([]);
@@ -581,20 +583,20 @@ export default function Feed({ searchQuery }) {
 
     try {
       const result = await CommentService.addComment(user.ID_USER, postId, text);
-      
+
       if (result.success) {
         // Ajouter le nouveau commentaire à la liste
         setComments(prev => ({
           ...prev,
           [postId]: [result.comment, ...(prev[postId] || [])]
         }));
-        
+
         // Réinitialiser le champ de texte
         setCommentText(prev => ({
           ...prev,
           [postId]: ''
         }));
-        
+
         // Mettre à jour le nombre de commentaires dans les posts
         setPosts(prevPosts => prevPosts.map(post => {
           if (post.id === postId) {
@@ -612,6 +614,62 @@ export default function Feed({ searchQuery }) {
       console.error('Erreur lors de l\'ajout du commentaire:', error);
       alert('Erreur lors de l\'ajout du commentaire');
     }
+  };
+
+  // Fonctions pour la suppression de commentaires
+  const confirmDeleteComment = (commentId, postId) => {
+    setCommentToDelete({ commentId, postId });
+    setShowDeleteCommentModal(true);
+  };
+
+  const handleDeleteComment = async () => {
+    if (!commentToDelete || !user) return;
+
+    const { commentId, postId } = commentToDelete;
+
+    try {
+      console.log('Suppression du commentaire:', commentId, 'par utilisateur:', user.ID_USER);
+      const result = await CommentService.deleteComment(commentId, user.ID_USER);
+
+      if (result.success) {
+        console.log('Commentaire supprimé avec succès');
+
+        // Supprimer le commentaire de l'état local
+        setComments(prev => {
+          const updatedComments = { ...prev };
+          if (updatedComments[postId]) {
+            updatedComments[postId] = updatedComments[postId].filter(
+              comment => comment.ID_COMMENT !== commentId
+            );
+          }
+          return updatedComments;
+        });
+
+        // Mettre à jour le nombre de commentaires
+        setPosts(prevPosts => prevPosts.map(post => {
+          if (post.id === postId) {
+            return {
+              ...post,
+              comments: Math.max(0, post.comments - 1)
+            };
+          }
+          return post;
+        }));
+
+        // Fermer le modal
+        setShowDeleteCommentModal(false);
+        setCommentToDelete(null);
+      } else {
+        console.error('Erreur lors de la suppression du commentaire:', result.error);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la suppression du commentaire:', error);
+    }
+  };
+
+  const cancelDeleteComment = () => {
+    setShowDeleteCommentModal(false);
+    setCommentToDelete(null);
   };
 
   // Si un utilisateur est sélectionné, afficher son profil
@@ -1314,8 +1372,27 @@ export default function Feed({ searchQuery }) {
                           />
                         </div>
                         <div className="flex-1 bg-white rounded-lg p-2 shadow-sm border border-gray-100">
-                          <div className="font-medium text-xs text-gray-800">{comment.AUTHOR_NAME}</div>
-                          <p className="text-sm text-gray-700">{comment.CONTENT}</p>
+                          <div className="flex justify-between items-start">
+                            <div
+                              className="font-medium text-xs text-gray-800 cursor-pointer hover:text-blue-600 transition-colors"
+                              onClick={() => showUserProfile(comment.ID_USER, comment.AUTHOR_NAME, comment.AUTHOR_AVATAR)}
+                            >
+                              {comment.AUTHOR_NAME}
+                            </div>
+                            {/* Bouton de suppression - visible uniquement pour les commentaires de l'utilisateur actuel */}
+                            {user && comment.ID_USER === user.ID_USER && (
+                              <button
+                                onClick={() => confirmDeleteComment(comment.ID_COMMENT, post.id)}
+                                className="text-gray-400 hover:text-red-500 transition-colors ml-2"
+                                title="Supprimer ce commentaire"
+                              >
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1H8a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                              </button>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-700 mt-1">{comment.CONTENT}</p>
                           <div className="text-xs text-gray-500 mt-1">{comment.TIME_AGO}</div>
                         </div>
                       </div>
@@ -1780,6 +1857,49 @@ export default function Feed({ searchQuery }) {
             {/* Instructions */}
             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white text-sm opacity-75">
               Cliquez n'importe où pour fermer
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmation de suppression de commentaire */}
+      {showDeleteCommentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center mb-4">
+                <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                  <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+              </div>
+
+              <div className="text-center">
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Supprimer le commentaire
+                </h3>
+                <p className="text-sm text-gray-500 mb-6">
+                  Êtes-vous sûr de vouloir supprimer ce commentaire ? Cette action est irréversible.
+                </p>
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  type="button"
+                  className="flex-1 bg-white border border-gray-300 rounded-md px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  onClick={cancelDeleteComment}
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  className="flex-1 bg-red-600 border border-transparent rounded-md px-4 py-2 text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                  onClick={handleDeleteComment}
+                >
+                  Supprimer
+                </button>
+              </div>
             </div>
           </div>
         </div>

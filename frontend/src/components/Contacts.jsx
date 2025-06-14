@@ -51,40 +51,8 @@ export default function Contacts() {
     contact => contact.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
   
-  // Historique des conversations
-  const chatHistory = {
-    1: [
-      { id: 1, sender: 'Sophie Lefebvre', text: 'Bonjour, comment vas-tu ?', time: '10:30', isUser: false },
-      { id: 2, sender: 'Vous', text: 'Très bien merci, et toi ?', time: '10:32', isUser: true },
-      { id: 3, sender: 'Sophie Lefebvre', text: 'Super ! Tu as des plans pour le weekend ?', time: '10:35', isUser: false }
-    ],
-    2: [
-      { id: 1, sender: 'Lucas Bernard', text: 'As-tu vu l\'annonce ?', time: '09:15', isUser: false },
-      { id: 2, sender: 'Vous', text: 'Oui, très intéressante !', time: '09:20', isUser: true },
-      { id: 3, sender: 'Lucas Bernard', text: 'Merci, je peux te donner plus de détails', time: '09:21', isUser: false }
-    ],
-    3: [
-      { id: 1, sender: 'Emma Petit', text: 'Salut, j\'ai une question', time: '14:45', isUser: false },
-      { id: 2, sender: 'Vous', text: 'Bien sûr, je t\'écoute', time: '15:00', isUser: true },
-      { id: 3, sender: 'Emma Petit', text: 'Est-ce qu\'il y a un parking ?', time: '15:05', isUser: false }
-    ],
-    4: [
-      { id: 1, sender: 'Hugo Dubois', text: 'On se retrouve où demain ?', time: '18:20', isUser: false },
-      { id: 2, sender: 'Vous', text: 'Au café près de la gare à 14h ?', time: '18:25', isUser: true },
-      { id: 3, sender: 'Hugo Dubois', text: 'Parfait, à demain !', time: '18:30', isUser: false }
-    ],
-    5: [
-      { id: 1, sender: 'Léa Moreau', text: 'J\'ai trouvé un super appartement !', time: '12:10', isUser: false },
-      { id: 2, sender: 'Vous', text: 'Génial ! Tu peux m\'envoyer des photos ?', time: '12:15', isUser: true },
-      { id: 3, sender: 'Léa Moreau', text: 'Bien sûr, je t\'envoie ça', time: '12:20', isUser: false }
-    ],
-    6: [
-      { id: 1, sender: 'Gabriel Roux', text: 'Bonjour, je suis intéressé', time: '11:05', isUser: false },
-      { id: 2, sender: 'Vous', text: 'Bonjour, merci pour votre intérêt !', time: '11:10', isUser: true },
-      { id: 3, sender: 'Gabriel Roux', text: 'Est-ce toujours disponible ?', time: '11:15', isUser: false }
-    ]
-  };
-  
+
+
   // Fonction pour formater le numéro de téléphone et ouvrir WhatsApp
   const openWhatsApp = (contact) => {
     if (!contact.phone) {

@@ -4,6 +4,7 @@ import UserPostService from '../services/UserPostService';
 import LikeService from '../services/LikeService';
 import SavedPostService from '../services/SavedPostService';
 import CommentService from '../services/CommentService';
+import UserService from '../services/UserService';
 import { useAuth } from '../context/AuthContext';
 
 export default function UserProfile({ user, onBack }) {
@@ -20,7 +21,36 @@ export default function UserProfile({ user, onBack }) {
   const [newComment, setNewComment] = useState({});
   const [mediaModal, setMediaModal] = useState({ isOpen: false, type: null, src: null });
   const [savedPosts, setSavedPosts] = useState({});
+  const [userDetails, setUserDetails] = useState(null);
+  const [userDetailsLoading, setUserDetailsLoading] = useState(true);
   const { user: currentUser } = useAuth();
+  const [commentToDelete, setCommentToDelete] = useState(null);
+  const [showDeleteCommentModal, setShowDeleteCommentModal] = useState(false);
+    // Fonction pour formater le numéro de téléphone et ouvrir WhatsApp
+    const openWhatsApp = (contact) => {
+      if (!contact.phone) {
+        alert(`Aucun numéro de téléphone disponible pour ${contact.name}`);
+        return;
+      }
+  
+      // Nettoyer le numéro de téléphone (enlever espaces, tirets, etc.)
+      let cleanPhone = contact.phone.replace(/[\s\-\(\)]/g, '');
+  
+      // Si le numéro commence par 0, le remplacer par +212 (indicatif Maroc)
+      if (cleanPhone.startsWith('0')) {
+        cleanPhone = '+212' + cleanPhone.substring(1);
+      }
+      // Si le numéro ne commence pas par +, ajouter +212
+      else if (!cleanPhone.startsWith('+')) {
+        cleanPhone = '+212' + cleanPhone;
+      }
+  
+      // Créer le lien WhatsApp
+      const whatsappUrl = `https://wa.me/${cleanPhone}?text=Bonjour ${contact.name}, je vous contacte depuis Localbook.`;
+  
+      // Ouvrir WhatsApp dans un nouvel onglet
+      window.open(whatsappUrl, '_blank');
+    };
 
   // Vérifier l'état de follow au chargement
   useEffect(() => {
@@ -46,6 +76,33 @@ export default function UserProfile({ user, onBack }) {
 
     checkFollowStatus();
   }, [currentUser, user]);
+
+  // Charger les détails complets de l'utilisateur
+  useEffect(() => {
+    const loadUserDetails = async () => {
+      if (!user || !user.id) {
+        setUserDetailsLoading(false);
+        return;
+      }
+
+      try {
+        setUserDetailsLoading(true);
+        const response = await UserService.getUserById(user.id);
+
+        if (response.success) {
+          setUserDetails(response.user);
+        } else {
+          console.error('Error loading user details:', response.error);
+        }
+      } catch (error) {
+        console.error('Error loading user details:', error);
+      } finally {
+        setUserDetailsLoading(false);
+      }
+    };
+
+    loadUserDetails();
+  }, [user]);
 
   // Charger les posts de l'utilisateur
   useEffect(() => {
@@ -304,6 +361,61 @@ export default function UserProfile({ user, onBack }) {
     setMediaModal({ isOpen: false, type: null, src: null });
   };
 
+  const confirmDeleteComment = (commentId, postId) => {
+    setCommentToDelete({ commentId, postId });
+    setShowDeleteCommentModal(true);
+  };
+
+  const handleDeleteComment = async () => {
+    if (!commentToDelete || !currentUser) return;
+    
+    const { commentId, postId } = commentToDelete;
+
+    try {
+      console.log('Suppression du commentaire:', commentId, 'par utilisateur:', currentUser.ID_USER);
+      const result = await CommentService.deleteComment(commentId, currentUser.ID_USER);
+      
+      if (result.success) {
+        console.log('Commentaire supprimé avec succès');
+        
+        // Supprimer le commentaire de l'état local
+        setComments(prev => {
+          const updatedComments = { ...prev };
+          if (updatedComments[postId]) {
+            updatedComments[postId] = updatedComments[postId].filter(
+              comment => comment.ID_COMMENT !== commentId
+            );
+          }
+          return updatedComments;
+        });
+
+        // Mettre à jour le nombre de commentaires
+        setPosts(prevPosts => prevPosts.map(post => {
+          if (post.id === postId) {
+            return {
+              ...post,
+              comments: Math.max(0, post.comments - 1)
+            };
+          }
+          return post;
+        }));
+        
+        // Fermer le modal
+        setShowDeleteCommentModal(false);
+        setCommentToDelete(null);
+      } else {
+        console.error('Erreur lors de la suppression du commentaire:', result.error);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la suppression du commentaire:', error);
+    }
+  };
+
+  const cancelDeleteComment = () => {
+    setShowDeleteCommentModal(false);
+    setCommentToDelete(null);
+  };
+
   return (
     <main className="flex-1 p-4 overflow-y-auto">
       {/* Message de succès */}
@@ -349,12 +461,20 @@ export default function UserProfile({ user, onBack }) {
             <div className="flex-1">
               <h1 className="text-xl font-bold">{user.name}</h1>
               <p className="text-gray-600">{user.username}</p>
-              <p className="mt-2 text-gray-700">{user.bio}</p>
-              
+              {user.bio && <p className="mt-2 text-gray-700">{user.bio}</p>}
+
               <div className="mt-3 flex flex-wrap gap-2">
-                <button className="px-4 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
-                  Message
-                </button>
+                {/* Afficher le bouton Contacter uniquement pour les propriétaires et intermédiaires */}
+                {userDetails && (userDetails.STATUT === 'proprietaire' || userDetails.STATUT === 'intermediaire') && (
+                  <button
+                    onClick={() => openWhatsApp({
+                      name: user.name,
+                      phone: userDetails?.TELE || null
+                    })}
+                    className="px-4 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                    Contacter
+                  </button>
+                )}
                 <button
                   className={`px-4 py-1 rounded-md transition-colors ${
                     followLoading
@@ -372,7 +492,7 @@ export default function UserProfile({ user, onBack }) {
                   }
                 </button>
               </div>
-              
+
               <div className="mt-4 flex space-x-6 text-sm">
                 <div>
                   <span className="font-semibold">{posts.length}</span> publications
@@ -386,6 +506,105 @@ export default function UserProfile({ user, onBack }) {
               </div>
             </div>
           </div>
+
+          {/* Informations détaillées de l'utilisateur */}
+          {userDetailsLoading ? (
+            <div className="mt-4 flex justify-center">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+            </div>
+          ) : userDetails && (
+            <div className="mt-6 pt-4 border-t border-gray-100">
+              <h3 className="text-lg font-medium text-gray-800 mb-4">Informations</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                {/* Statut */}
+                {userDetails.STATUT && (
+                  <div className="flex items-center space-x-3">
+                    <svg className="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clipRule="evenodd"></path>
+                    </svg>
+                    <div className="flex-1">
+                      <span className="text-gray-700 font-medium">Statut :</span>
+                      <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
+                        userDetails.STATUT === 'proprietaire' ? 'bg-green-100 text-green-800' :
+                        userDetails.STATUT === 'intermediaire' ? 'bg-blue-100 text-blue-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {userDetails.STATUT}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Ville */}
+                {userDetails.VILLE && (
+                  <div className="flex items-center space-x-3">
+                    <svg className="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"></path>
+                    </svg>
+                    <div className="flex-1">
+                      <span className="text-gray-700 font-medium">Ville :</span>
+                      <span className="ml-2 text-gray-600">{userDetails.VILLE}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Email */}
+                {userDetails.EMAIL && (
+                  <div className="flex items-center space-x-3">
+                    <svg className="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"></path>
+                      <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"></path>
+                    </svg>
+                    <div className="flex-1">
+                      <span className="text-gray-700 font-medium">Email :</span>
+                      <span className="ml-2 text-gray-600">{userDetails.EMAIL}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Téléphone - uniquement pour propriétaires et intermédiaires */}
+                {userDetails.TELE && (userDetails.STATUT === 'proprietaire' || userDetails.STATUT === 'intermediaire') && (
+                  <div className="flex items-center space-x-3">
+                    <svg className="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path>
+                    </svg>
+                    <div className="flex-1">
+                      <span className="text-gray-700 font-medium">Téléphone :</span>
+                      <span className="ml-2 text-gray-600">{userDetails.TELE}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Date d'inscription */}
+                {userDetails.DATE_INSCRIPTION && (
+                  <div className="flex items-center space-x-3">
+                    <svg className="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd"></path>
+                    </svg>
+                    <div className="flex-1">
+                      <span className="text-gray-700 font-medium">Membre depuis :</span>
+                      <span className="ml-2 text-gray-600">{new Date(userDetails.DATE_INSCRIPTION).toLocaleDateString('fr-FR')}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Numéro CIN - uniquement pour propriétaires et intermédiaires */}
+                {userDetails.CIN_NUM && (userDetails.STATUT === 'proprietaire' || userDetails.STATUT === 'intermediaire') && (
+                  <div className="flex items-center space-x-3">
+                    <svg className="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2h12v8H4V6z" clipRule="evenodd"></path>
+                    </svg>
+                    <div className="flex-1">
+                      <span className="text-gray-700 font-medium">CIN :</span>
+                      <span className="ml-2 text-gray-600">{userDetails.CIN_NUM}</span>
+                    </div>
+                  </div>
+                )}
+
+              </div>
+            </div>
+          )}
         </div>
         
         {/* Publications */}
@@ -582,66 +801,78 @@ export default function UserProfile({ user, onBack }) {
                   
                   {/* Section commentaires */}
                   {showComments[post.id] && (
-                    <div className="bg-gray-50 px-4 py-3 border-t border-gray-100">
-                      {/* Liste des commentaires */}
-                      {comments[post.id] && comments[post.id].length > 0 && (
-                        <div className="mb-4 space-y-3">
-                          {comments[post.id].map((comment, index) => (
-                            <div key={comment.ID_COMMENT || index} className="flex items-start space-x-3">
+                    <div className="mt-2 border-t pt-2 px-2 pb-3">
+                      {comments[post.id] && comments[post.id].length > 0 ? (
+                        [...comments[post.id]]
+                          .sort((a, b) => new Date(a.DATE_COMMENTS) - new Date(b.DATE_COMMENTS))
+                          .map(comment => (
+                            <div key={comment.ID_COMMENT} className="flex items-start space-x-2 mb-2">
                               <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
-                                <img
-                                  src={comment.AUTHOR_AVATAR ? `http://localhost/localbook/backend/api/Uploads/users/${comment.AUTHOR_AVATAR}` : "https://via.placeholder.com/32"}
-                                  alt={comment.AUTHOR_NAME}
-                                  className="w-full h-full object-cover"
+                                <img 
+                                  src={comment.AUTHOR_AVATAR || "https://via.placeholder.com/40?text=User"} 
+                                  alt={comment.AUTHOR_NAME} 
+                                  className="w-full h-full object-cover" 
                                 />
                               </div>
-                              <div className="flex-1 bg-white rounded-lg p-3 shadow-sm">
-                                <div className="font-medium text-sm text-gray-900">{comment.AUTHOR_NAME}</div>
+                              <div className="flex-1 bg-white rounded-lg p-2 shadow-sm border border-gray-100">
+                                <div className="flex justify-between items-start">
+                                  <div
+                                    className="font-medium text-xs text-gray-800 cursor-pointer hover:text-blue-600 transition-colors"
+                                    onClick={() => handleUserClick(comment.ID_USER)}
+                                  >
+                                    {comment.AUTHOR_NAME}
+                                  </div>
+                                  {/* Bouton de suppression - visible uniquement pour les commentaires de l'utilisateur actuel */}
+                                  {currentUser && comment.ID_USER === currentUser.ID_USER && (
+                                    <button
+                                      onClick={() => confirmDeleteComment(comment.ID_COMMENT, post.id)}
+                                      className="text-gray-400 hover:text-red-500 transition-colors ml-2"
+                                      title="Supprimer ce commentaire"
+                                    >
+                                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1H8a1 1 0 00-1 1v3M4 7h16"></path>
+                                      </svg>
+                                    </button>
+                                  )}
+                                </div>
                                 <p className="text-sm text-gray-700 mt-1">{comment.CONTENT}</p>
-                                <div className="text-xs text-gray-500 mt-1">{comment.TIME_AGO}</div>
+                                <p className="text-xs text-gray-500 mt-1">{comment.TIME_AGO}</p>
                               </div>
                             </div>
-                          ))}
-                        </div>
+                          ))
+                      ) : (
+                        <p className="text-sm text-gray-500 text-center py-2">Aucun commentaire pour le moment</p>
                       )}
-
+                      
                       {/* Formulaire d'ajout de commentaire */}
-                      {currentUser && (
-                        <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
-                            <img
-                              src={currentUser.IMG_PROFIL ? `http://localhost/localbook/backend/api/Uploads/users/${currentUser.IMG_PROFIL}` : "https://via.placeholder.com/32"}
-                              alt="Vous"
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <div className="flex-1 relative">
-                            <input
-                              type="text"
-                              className="w-full border border-gray-200 rounded-full py-2 px-4 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              placeholder="Ajouter un commentaire..."
-                              value={newComment[post.id] || ''}
-                              onChange={(e) => setNewComment(prev => ({
-                                ...prev,
-                                [post.id]: e.target.value
-                              }))}
-                              onKeyPress={(e) => {
-                                if (e.key === 'Enter') {
-                                  handleAddComment(post.id);
-                                }
-                              }}
-                            />
-                            <button
-                              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-blue-500 hover:text-blue-600 transition-colors"
-                              onClick={() => handleAddComment(post.id)}
-                            >
-                              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path>
-                              </svg>
-                            </button>
-                          </div>
+                      <div className="flex items-center space-x-2 mt-3">
+                        <div className="w-8 h-8 rounded-full overflow-hidden">
+                          <img 
+                            src={currentUser?.IMG_PROFIL || "https://via.placeholder.com/40?text=You"} 
+                            alt="Vous" 
+                            className="w-full h-full object-cover" 
+                            onError={(e) => e.target.src = "https://via.placeholder.com/40?text=You"}
+                          />
                         </div>
-                      )}
+                        <div className="flex-1 relative">
+                          <input 
+                            type="text" 
+                            className="w-full border rounded-full py-1 px-3 pr-10 text-sm" 
+                            placeholder="Ajouter un commentaire..." 
+                            value={newComment[post.id] || ''}
+                            onChange={(e) => setNewComment(prev => ({ ...prev, [post.id]: e.target.value }))}
+                            onKeyPress={(e) => e.key === 'Enter' && handleAddComment(post.id)}
+                          />
+                          <button 
+                            className="absolute right-2 top-1 text-blue-500"
+                            onClick={() => handleAddComment(post.id)}
+                          >
+                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path>
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -691,13 +922,50 @@ export default function UserProfile({ user, onBack }) {
           </div>
         </div>
       )}
+
+      {/* Modal de confirmation de suppression de commentaire */}
+      {showDeleteCommentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center mb-4">
+                <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                  <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+              </div>
+
+              <div className="text-center">
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Supprimer le commentaire
+                </h3>
+                <p className="text-sm text-gray-500 mb-6">
+                  Êtes-vous sûr de vouloir supprimer ce commentaire ? Cette action est irréversible.
+                </p>
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  type="button"
+                  className="flex-1 bg-white border border-gray-300 rounded-md px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  onClick={cancelDeleteComment}
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  className="flex-1 bg-red-600 border border-transparent rounded-md px-4 py-2 text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                  onClick={handleDeleteComment}
+                >
+                  Supprimer
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
-
-
-
-
-
-
 

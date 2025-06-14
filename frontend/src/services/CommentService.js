@@ -98,6 +98,53 @@ class CommentService {
       };
     }
   }
+
+  /**
+   * Supprimer un commentaire
+   * @param {number} commentId - ID du commentaire
+   * @param {number} userId - ID de l'utilisateur
+   * @returns {Promise<Object>} Résultat de l'opération
+   */
+  static async deleteComment(commentId, userId) {
+    try {
+      console.log('CommentService.deleteComment appelé avec:', commentId, userId);
+      
+      const response = await fetch(`${API_BASE_URL}/comments/delete.php`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          commentId,
+          userId
+        })
+      });
+
+      console.log('Réponse du serveur:', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Données reçues:', data);
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Erreur lors de la suppression du commentaire');
+      }
+
+      return {
+        success: true,
+        message: data.message
+      };
+    } catch (error) {
+      console.error('Delete comment error:', error);
+      return {
+        success: false,
+        error: error.message || 'Erreur lors de la suppression du commentaire'
+      };
+    }
+  }
 }
 
 export default CommentService;
