@@ -109,7 +109,7 @@ export default function ChangePasswordModal({ isOpen, onClose }) {
 
   // Fermer le modal en cliquant à l'extérieur
   const handleBackdropClick = (e) => {
-    if (e.target === e.currentTarget) {
+    if (e.target === e.currentTarget) { // currentTarget sur lequel l'element est attachée div
       handleClose();
     }
   };

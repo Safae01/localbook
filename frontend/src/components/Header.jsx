@@ -9,12 +9,7 @@ export default function Header({ onShowProfile, onShowFeed, onSearch }) {
   const navigate = useNavigate();
   const { notifications, loading: notificationsLoading, unreadCount, markNotificationsAsViewed } = useNotifications();
 
-  // Debug: afficher les notifications dans la console
-  React.useEffect(() => {
-    console.log('Notifications chargées:', notifications);
-  }, [notifications]);
-
-  // Générer l'URL de l'image de profil
+  
   const profileImageUrl = user?.IMG_PROFIL ? `http://localhost/localbook/backend/api/Uploads/users/${user.IMG_PROFIL}` : "https://via.placeholder.com/40";
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);

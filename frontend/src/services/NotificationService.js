@@ -47,7 +47,7 @@ class NotificationService {
       const response = await fetch(`${API_BASE_URL}/notifications/create.php`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json',// en ronvois les données s frm de json
         },
         body: JSON.stringify({
           user_from: userFrom,

@@ -3,11 +3,16 @@ const API_URL = 'http://localhost/localbook/backend/api';
 class UserService {
     /**
      * Récupérer tous les utilisateurs de la base de données
+     * @param {boolean} isAdmin - Si true, récupère tous les utilisateurs (pour admin)
      * @returns {Promise<Object>} Résultat de l'opération
      */
-    static async getAllUsers() {
+    static async getAllUsers(isAdmin = false) {
         try {
-            const response = await fetch(`${API_URL}/users/get_all_users.php`);
+            const endpoint = isAdmin
+                ? `${API_URL}/admin/get-all-users.php`
+                : `${API_URL}/users/get_all_users.php`;
+
+            const response = await fetch(endpoint);
 
             if (!response.ok) {
                 throw new Error('Network response was not ok');

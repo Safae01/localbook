@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext'; // Updated import
+import { useAuth } from '../context/AuthContext';
+import { useAdmin } from '../context/AdminContext';
 
 export default function Auth() {
   const { register, login, error, success } = useAuth();
+  const { adminLogin, error: adminError, success: adminSuccess } = useAdmin();
   const [isLogin, setIsLogin] = useState(true);
+  const [isAdminLogin, setIsAdminLogin] = useState(false);
   const [form, setForm] = useState({ NOM: '', CIN_NUM: '', STATUT: '', TELE: '', EMAIL: '', MDPS: '', confirmPassword: '' });
   const [cinFile, setCinFile] = useState(null);
   const [cinPreview, setCinPreview] = useState(null);
@@ -121,19 +124,29 @@ export default function Auth() {
     console.log('Données à envoyer:', body);
     console.log('Fichier CIN à envoyer:', cinFile);
 
-    const result = isLogin ? await login(body) : await register(body, cinFile);
-    if (result.success) {
-      if (isLogin) {
-        setTimeout(() => navigate('/home'), 1500);
-      } else {
-        // Après inscription réussie, basculer vers le mode login
-        setTimeout(() => {
-          setIsLogin(true);
-          setForm({ NOM: '', CIN_NUM: '', STATUT: '', TELE: '', EMAIL: '', MDPS: '', confirmPassword: '' });
-          setCinFile(null);
-          setCinPreview(null);
-          setValidationErrors({});
-        }, 2000);
+    let result;
+    if (isAdminLogin) {
+      // Connexion admin
+      result = await adminLogin(body);
+      if (result.success) {
+        setTimeout(() => navigate('/admin'), 1500);
+      }
+    } else {
+      // Connexion utilisateur normal ou inscription
+      result = isLogin ? await login(body) : await register(body, cinFile);
+      if (result.success) {
+        if (isLogin) {
+          setTimeout(() => navigate('/home'), 1500);
+        } else {
+          // Après inscription réussie, basculer vers le mode login
+          setTimeout(() => {
+            setIsLogin(true);
+            setForm({ NOM: '', CIN_NUM: '', STATUT: '', TELE: '', EMAIL: '', MDPS: '', confirmPassword: '' });
+            setCinFile(null);
+            setCinPreview(null);
+            setValidationErrors({});
+          }, 2000);
+        }
       }
     }
   };
@@ -285,11 +298,13 @@ export default function Auth() {
               <p className="mt-2 text-gray-600">Connectez-vous avec vos amis et le monde qui vous entoure.</p>
             </div>
             <div className="bg-white rounded-lg shadow-lg p-8">
-              <h2 className="text-2xl font-bold mb-6 text-center">{isLogin ? 'Connexion' : 'Inscription'}</h2>
-              {error && <p className="text-red-500 text-center mb-4">{error}</p>}
-              {success && <p className="text-green-500 text-center mb-4">{success}</p>}
+              <h2 className="text-2xl font-bold mb-6 text-center">
+                {isAdminLogin ? 'Connexion Admin' : (isLogin ? 'Connexion' : 'Inscription')}
+              </h2>
+              {(error || adminError) && <p className="text-red-500 text-center mb-4">{error || adminError}</p>}
+              {(success || adminSuccess) && <p className="text-green-500 text-center mb-4">{success || adminSuccess}</p>}
               <form onSubmit={handleSubmit} className="space-y-4">
-                {!isLogin && (
+                {!isLogin && !isAdminLogin && (
                   <>
                     <div>
                       <label htmlFor="name" className="block text-sm font-medium text-gray-700">Nom complet</label>
@@ -459,7 +474,7 @@ export default function Auth() {
                     <p className="mt-1 text-sm text-red-600">{validationErrors.MDPS}</p>
                   )}
                 </div>
-                {!isLogin && (
+                {!isLogin && !isAdminLogin && (
                   <div>
                     <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
                       Confirmer le mot de passe <span className="text-red-500">*</span>
@@ -485,7 +500,7 @@ export default function Auth() {
                   type="submit"
                   className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                 >
-                  {isLogin ? 'Se connecter' : "S'inscrire"}
+                  {isAdminLogin ? 'Connexion Admin' : (isLogin ? 'Se connecter' : "S'inscrire")}
                 </button>
               </form>
               <div className="mt-6">
@@ -497,13 +512,29 @@ export default function Auth() {
                 </div>
                 
               </div>
-              <div className="mt-6 text-center">
+              <div className="mt-6 text-center space-y-2">
+                {!isAdminLogin && (
+                  <button
+                    type="button"
+                    className="text-sm text-blue-600 hover:text-blue-500 block w-full"
+                    onClick={() => setIsLogin(!isLogin)}
+                  >
+                    {isLogin ? 'Pas encore de compte ? Inscrivez-vous' : 'Déjà un compte ? Connectez-vous'}
+                  </button>
+                )}
                 <button
                   type="button"
-                  className="text-sm text-blue-600 hover:text-blue-500"
-                  onClick={() => setIsLogin(!isLogin)}
+                  className="text-sm text-red-600 hover:text-red-500 block w-full"
+                  onClick={() => {
+                    setIsAdminLogin(!isAdminLogin);
+                    setIsLogin(true);
+                    setForm({ NOM: '', CIN_NUM: '', STATUT: '', TELE: '', EMAIL: '', MDPS: '', confirmPassword: '' });
+                    setCinFile(null);
+                    setCinPreview(null);
+                    setValidationErrors({});
+                  }}
                 >
-                  {isLogin ? 'Pas encore de compte ? Inscrivez-vous' : 'Déjà un compte ? Connectez-vous'}
+                  {isAdminLogin ? 'Retour à la connexion utilisateur' : 'Connexion Administrateur'}
                 </button>
               </div>
             </div>
